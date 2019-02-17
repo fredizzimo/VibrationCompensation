@@ -44,7 +44,7 @@ def plot(doc, df):
         x_range=(min_axis, max_axis),
         y_range=(min_axis, max_axis),
         match_aspect=True,
-        output_backend="canvas"
+        lod_threshold = None
     )
 
     data_source=bokeh.models.ColumnDataSource(df[df.layer == 1])
