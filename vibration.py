@@ -2,6 +2,12 @@ import argparse
 import pandas
 import bokeh
 import bokeh.plotting
+from bokeh.models import Slider
+import bokeh.layouts as layouts
+import bokeh.models
+from bokeh.application import Application
+from bokeh.application.handlers import FunctionHandler
+from bokeh.server.server import Server
 import numpy as np
 
 def read_gcode(f):
@@ -28,21 +34,40 @@ def read_gcode(f):
     print(df[:100])
     return df
 
-def plot(df):
-    bokeh.plotting.output_file("output.html")
-    p = bokeh.plotting.figure(plot_width=400, plot_height=400, match_aspect=True)
+def plot(doc, df):
+    min_axis = min(df["x"].min(), df["y"].min())
+    max_axis = max(df["y"].max(), df["y"].max())
+    print(min_axis, max_axis)
+    p = bokeh.plotting.figure(
+        plot_width=1000,
+        plot_height=1000,
+        x_range=(min_axis, max_axis),
+        y_range=(min_axis, max_axis),
+        match_aspect=True,
+        output_backend="canvas"
+    )
 
-    # add a line renderer
-    p.line(df["x"], df["y"], line_width=0.25)
-    bokeh.plotting.save(p)
+    data_source=bokeh.models.ColumnDataSource(df[df.layer == 1])
+    p.line(source=data_source, x="x", y="y", line_width=0.25)
+    slider = Slider(start=0, end=df["layer"].max(), value=1, step=1, title="Layer")
+    def on_layer_change(attr, old_value, new_value):
+        data_source.data.update(bokeh.models.ColumnDataSource.from_df(df[df.layer == new_value]))
+    slider.on_change("value", on_layer_change)
+    layout = layouts.layout([p, slider])
+    doc.add_root(layout)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Test for a vibration compensation algorithm")
     parser.add_argument("input", type=argparse.FileType("r"))
     args = parser.parse_args()
     df = read_gcode(args.input)
-    plot(df[df.layer == 1])
-
+    def show(doc):
+        plot(doc, df)
+    server = Server({'/': Application(FunctionHandler(show))}, port=4368)
+    server.start()
+    #server.io_loop.add_callback(server.show, "/")
+    server.io_loop.start()
 
 if __name__ == "__main__":
     main()
