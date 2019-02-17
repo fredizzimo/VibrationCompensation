@@ -31,7 +31,6 @@ def read_gcode(f):
     df.loc[0:1, "layer"].fillna(0.0, inplace=True)
     df["layer"].fillna(method="ffill", inplace=True)
     df["layer"] = df["layer"].astype(int)
-    print(df[:100])
     return df
 
 def plot(doc, df):
@@ -47,11 +46,26 @@ def plot(doc, df):
         lod_threshold = None
     )
 
-    data_source=bokeh.models.ColumnDataSource(df[df.layer == 1])
-    p.line(source=data_source, x="x", y="y", line_width=0.25)
-    slider = Slider(start=0, end=df["layer"].max(), value=1, step=1, title="Layer")
+    move_data_source=bokeh.models.ColumnDataSource()
+    print_data_source=bokeh.models.ColumnDataSource()
+
+    def update_data_sources(layer):
+        print(df[:10])
+        layer_df = df[df.layer == layer]
+        print(layer_df[:10])
+        def update_data_source(data_source, data_frame):
+            data_source.data.update(bokeh.models.ColumnDataSource.from_df(data_frame))
+            print(data_frame[:10])
+        update_data_source(move_data_source, layer_df[layer_df.e == 0.0])
+        update_data_source(print_data_source, layer_df[layer_df.e != 0.0])
+
+    update_data_sources(0)
+
+    p.line(source=move_data_source, x="x", y="y", line_width=2, line_dash="dashed")
+    p.line(source=print_data_source, x="x", y="y", line_width=1, line_dash="solid")
+    slider = Slider(start=0, end=df["layer"].max(), value=0, step=1, title="Layer")
     def on_layer_change(attr, old_value, new_value):
-        data_source.data.update(bokeh.models.ColumnDataSource.from_df(df[df.layer == new_value]))
+        update_data_sources(new_value)
     slider.on_change("value", on_layer_change)
     layout = layouts.layout([p, slider])
     doc.add_root(layout)
