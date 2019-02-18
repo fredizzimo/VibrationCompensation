@@ -8,15 +8,15 @@ import bokeh.models
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.server.server import Server
-from bokeh.palettes import Inferno256
-from bokeh.transform import linear_cmap
+import colorcet
+from bokeh.transform import log_cmap, linear_cmap
 import numpy as np
 
 def read_gcode(f):
     move_commands = []
     for l in f.readlines():
         l = l.strip().lower()
-        l = l[:l.find(";")]
+        l = l.split(";")[0]
         if l.startswith("g1"):
             args = l.split()[1:]
             move_commands.append({arg[0]:float(arg[1:]) for arg in args})
@@ -83,8 +83,8 @@ def plot(doc, df):
 
     min_f = df["f"].min()
     max_f = df["f"].max()
-    color_mapper = linear_cmap(field_name='f',
-                               palette=Inferno256,
+    color_mapper = log_cmap(field_name='f',
+                               palette=colorcet.b_linear_kry_5_95_c72,
                                low=min_f,
                                high=max_f)
 
