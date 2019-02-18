@@ -34,12 +34,9 @@ def read_gcode(f):
     df["layer"].fillna(method="ffill", inplace=True)
     df["layer"] = df["layer"].astype(int)
 
-    df["start_x"] = df["x"].shift(1)
-    df["start_y"] = df["y"].shift(1)
-    df["start_z"] = df["z"].shift(1)
-    df.loc[0, "start_x"] = 0.0
-    df.loc[0, "start_y"] = 0.0
-    df.loc[0, "start_z"] = 0.0
+    df["start_x"] = df["x"].shift(1, fill_value=0.0)
+    df["start_y"] = df["y"].shift(1, fill_value=0.0)
+    df["start_z"] = df["z"].shift(1, fill_value=0.0)
 
     return df
 
