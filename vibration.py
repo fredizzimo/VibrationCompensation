@@ -1,15 +1,7 @@
 import argparse
-import pandas
-import bokeh
-import bokeh.plotting
-from bokeh.models import Slider
-import bokeh.layouts as layouts
-import bokeh.models
-from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
-from bokeh.server.server import Server
+import pandas as pd
 import colorcet
-from bokeh.transform import log_cmap, linear_cmap
+import bokeh_imports as plt
 import numpy as np
 
 def read_gcode(f):
@@ -21,7 +13,7 @@ def read_gcode(f):
             args = l.split()[1:]
             move_commands.append({arg[0]:float(arg[1:]) for arg in args})
 
-    df = pandas.DataFrame.from_records(move_commands, columns=["x", "y", "z", "e", "f"])
+    df = pd.DataFrame.from_records(move_commands, columns=["x", "y", "z", "e", "f"])
     all_expect_e = df.columns.difference(["e"])
     df.iloc[0].fillna(0.0, inplace=True)
     df[all_expect_e] = df[all_expect_e].fillna(method="ffill")
@@ -43,8 +35,7 @@ def read_gcode(f):
 def plot(doc, df):
     min_axis = min(df["x"].min(), df["y"].min())
     max_axis = max(df["y"].max(), df["y"].max())
-    print(min_axis, max_axis)
-    p = bokeh.plotting.figure(
+    p = plt.Figure(
         plot_width=1000,
         plot_height=1000,
         x_range=(min_axis, max_axis),
@@ -60,8 +51,8 @@ def plot(doc, df):
         "y1": [],
         "f": []
     }
-    move_data_source=bokeh.models.ColumnDataSource(columns)
-    print_data_source=bokeh.models.ColumnDataSource(columns)
+    move_data_source=plt.ColumnDataSource(columns)
+    print_data_source=plt.ColumnDataSource(columns)
 
     def update_data_sources(layer):
         layer_df = df[df.layer == layer]
@@ -80,10 +71,10 @@ def plot(doc, df):
 
     min_f = df["f"].min()
     max_f = df["f"].max()
-    color_mapper = log_cmap(field_name='f',
-                               palette=colorcet.b_linear_kry_5_95_c72,
-                               low=min_f,
-                               high=max_f)
+    color_mapper = plt.log_cmap(field_name='f',
+                                palette=colorcet.b_linear_kry_5_95_c72,
+                                low=min_f,
+                                high=max_f)
 
     p.segment(source=move_data_source,
               x0="x0", y0="y0", x1="x1", y1="y1",
@@ -95,13 +86,13 @@ def plot(doc, df):
               line_width=2,
               line_color=color_mapper,
               line_dash="solid")
-    color_bar = bokeh.models.ColorBar(color_mapper=color_mapper["transform"], width=8, location=(0, 0))
+    color_bar = plt.ColorBar(color_mapper=color_mapper["transform"], width=8, location=(0, 0))
     p.add_layout(color_bar, 'left')
-    slider = Slider(start=0, end=df["layer"].max(), value=0, step=1, title="Layer")
+    slider = plt.Slider(start=0, end=df["layer"].max(), value=0, step=1, title="Layer")
     def on_layer_change(attr, old_value, new_value):
         update_data_sources(new_value)
     slider.on_change("value", on_layer_change)
-    layout = layouts.layout([p, slider])
+    layout = plt.layout([p, slider])
     doc.add_root(layout)
 
 
@@ -112,9 +103,8 @@ def main():
     df = read_gcode(args.input)
     def show(doc):
         plot(doc, df)
-    server = Server({'/': Application(FunctionHandler(show))}, port=4368)
+    server = plt.Server({'/': plt.Application(plt.FunctionHandler(show))}, port=4368)
     server.start()
-    #server.io_loop.add_callback(server.show, "/")
     server.io_loop.start()
 
 if __name__ == "__main__":
