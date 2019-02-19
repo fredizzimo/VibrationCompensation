@@ -1,5 +1,7 @@
 import colorcet
-import bokeh_imports as plt
+
+from vibration_compensation import bokeh_imports as plt
+
 
 class Plotter(object):
     def __init__(self, data, port):
