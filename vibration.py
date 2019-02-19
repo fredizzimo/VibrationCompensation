@@ -1,6 +1,5 @@
 import argparse
-from vibration_compensation.gcode_reader import read_gcode
-from vibration_compensation.plotter import Plotter
+from vibration_compensation import read_gcode, Plotter
 
 
 def main():
