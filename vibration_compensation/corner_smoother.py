@@ -91,3 +91,6 @@ class CornerSmoother(object):
         data.curve[valid_segments_mapper,9] = B9
         data.curve[valid_segments_mapper,10] = B10
         data.curve[valid_segments_mapper,11] = B11
+
+        valid_curves = ~np.isnan(data.curve[:,0,0])
+        spline = PHSpline(data.curve[valid_curves])

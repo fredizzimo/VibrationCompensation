@@ -1,6 +1,7 @@
 import colorcet
 from . import bokeh_imports as plt
 from .data import Data
+from .phspline import PHSpline
 import numpy as np
 
 
@@ -66,11 +67,27 @@ class Plotter(object):
                   line_dash="solid")
         color_bar = plt.ColorBar(color_mapper=color_mapper["transform"], width=8, location=(0, 0))
         p.add_layout(color_bar, 'left')
+        #### Test code
+        p2 = plt.Figure(
+            plot_width=1000,
+            plot_height=1000,
+            x_range=(min_axis, max_axis),
+            y_range=(min_axis, max_axis),
+            match_aspect=True,
+            lod_threshold=None
+        )
+        start, end = self.data.layer_index[5]
+        valid_curves = ~np.isnan(self.data.curve[start:end,0,0])
+        spline = PHSpline(self.data.curve[start:end][valid_curves])
+        points = spline(np.linspace(0, 1, 100000))
+        print(points)
+        p2.line(points[:,0], points[:,1])
+        ####
         slider = plt.Slider(start=0, end=max(self.data.layer_index.keys()), value=0, step=1, title="Layer")
         def on_layer_change(attr, old_value, new_value):
             update_data_sources(new_value)
         slider.on_change("value", on_layer_change)
-        layout = plt.layout([p, slider])
+        layout = plt.layout([p, p2, slider])
         doc.add_root(layout)
 
     def run_webserver(self):
