@@ -3,15 +3,21 @@
 
 import numpy as np
 np.set_printoptions(suppress=True)
+#from vibration_compensation import PHSpline
+from .phspline import PHSpline
+from .data import Data
 
 class CornerSmoother(object):
     def __init__(self, maximum_error):
         self.maximum_error = maximum_error
 
-    def generate_corners(self, data):
-        P0 = np.column_stack((data["start_x"][:-1], data["start_y"][:-1]))
-        P1 = np.column_stack((data["x"][:-1], data["y"][:-1]))
-        P2 = np.column_stack((data["x"][1:], data["y"][1:]))
+    def generate_corners(self, data: Data):
+        #P0 = np.column_stack((data["start_x"][:-1], data["start_y"][:-1]))
+        #P1 = np.column_stack((data["x"][:-1], data["y"][:-1]))
+        #P2 = np.column_stack((data["x"][1:], data["y"][1:]))
+        P0 = data.start_xy[:-1]
+        P1 = data.end_xy[:-1]
+        P2 = data.end_xy[1:]
         #vector_a = P0 - P1
         #vector_b = P2 - P1
         # Some lines have zero length, but let's still do the calculations and ignore them later
@@ -20,7 +26,6 @@ class CornerSmoother(object):
             vector_b = P2 - P0
             length_a = np.linalg.norm(vector_a, axis=1)
             length_b = np.linalg.norm(vector_b, axis=1)
-            print(vector_a.shape, length_a.shape)
             T0 = vector_a / length_a[:, np.newaxis]
             T1 = vector_b / length_b[:, np.newaxis]
             T0_plus_T1 = T0 + T1
@@ -28,8 +33,6 @@ class CornerSmoother(object):
             dot_product = np.einsum('ij,ij->i', T0, T1)
             angle = np.arccos(dot_product)
             valid_segments = np.greater(angle, 0)
-
-        print(angle[valid_segments][:100])
 
         # Eq 19 helper variables
         # TODO: this could probably be faster by combining all arrays, then do the filtering
@@ -82,8 +85,17 @@ class CornerSmoother(object):
         B10 = P1[valid_segments] - (2.0*l + l_prime)[:, np.newaxis] * T1
         B11 = P1[valid_segments] - (3.0*l + l_prime)[:, np.newaxis] * T1
 
-        print(T1[:100])
+        #control_points = np.concatenate((B0[], B1, B2, B3, B4, B5, B6, B7, B8, B9, B10, B11), axis=3)
+        control_points = np.concatenate((
+            B0[:,None], B1[:,None], B2[:,None], B3[:,None], B4[:,None], B5[:,None], B6[:,None],
+            B7[:,None], B8[:,None], B9[:,None], B10[:,None], B11[:,None]),
+            axis=1)
 
+        #print(control_points[:20])
+
+        #curve = np.empty((data.shape[0],) + control_points.shape[1:3])
+        #print(curve.shape)
+        #data["curve"] = pd.Series((curve), index=data.index)
 
         #for i in range(1000):
         #    print(P0[i], P1[i], P2[i], length_b[i], length_b[i], np.degrees(angle[i]))

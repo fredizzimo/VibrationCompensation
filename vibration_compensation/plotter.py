@@ -1,16 +1,17 @@
 import colorcet
-
-from vibration_compensation import bokeh_imports as plt
+from . import bokeh_imports as plt
+from .data import Data
+import numpy as np
 
 
 class Plotter(object):
-    def __init__(self, data, port):
+    def __init__(self, data: Data, port):
         self.data = data
         self.port = port
 
     def plot(self, doc):
-        min_axis = min(self.data["x"].min(), self.data["y"].min())
-        max_axis = max(self.data["y"].max(), self.data["y"].max())
+        min_axis = np.min(self.data.start_xy)
+        max_axis = np.max(self.data.end_xy)
         p = plt.Figure(
             plot_width=1000,
             plot_height=1000,
@@ -31,22 +32,23 @@ class Plotter(object):
         print_data_source=plt.ColumnDataSource(columns)
 
         def update_data_sources(layer):
-            layer_df = self.data[self.data.layer == layer]
-            def update_data_source(data_source, data_frame):
+            start, end = self.data.layer_index[layer]
+            def update_data_source(data_source, filter):
                 data_source.data = {
-                    "x0": data_frame["start_x"],
-                    "x1": data_frame["x"],
-                    "y0": data_frame["start_y"],
-                    "y1": data_frame["y"],
-                    "f": data_frame["f"],
+                    "x0": self.data.start_xy[start:end, 0][filter],
+                    "x1": self.data.end_xy[start:end, 0][filter],
+                    "y0": self.data.start_xy[start:end, 1][filter],
+                    "y1": self.data.end_xy[start:end, 1][filter],
+                    "f": self.data.f[start:end][filter],
                 }
-            update_data_source(move_data_source, layer_df[layer_df.e == 0.0])
-            update_data_source(print_data_source, layer_df[layer_df.e != 0.0])
+            extrude_moves = self.data.e[start:end] > 0
+            update_data_source(move_data_source, ~extrude_moves)
+            update_data_source(print_data_source, extrude_moves)
 
         update_data_sources(0)
 
-        min_f = self.data["f"].min()
-        max_f = self.data["f"].max()
+        min_f = np.min(self.data.f)
+        max_f = np.max(self.data.f)
         color_mapper = plt.log_cmap(field_name='f',
                                     palette=colorcet.b_linear_kry_5_95_c72,
                                     low=min_f,
@@ -64,7 +66,7 @@ class Plotter(object):
                   line_dash="solid")
         color_bar = plt.ColorBar(color_mapper=color_mapper["transform"], width=8, location=(0, 0))
         p.add_layout(color_bar, 'left')
-        slider = plt.Slider(start=0, end=self.data["layer"].max(), value=0, step=1, title="Layer")
+        slider = plt.Slider(start=0, end=max(self.data.layer_index.keys()), value=0, step=1, title="Layer")
         def on_layer_change(attr, old_value, new_value):
             update_data_sources(new_value)
         slider.on_change("value", on_layer_change)
