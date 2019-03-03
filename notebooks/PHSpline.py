@@ -44,6 +44,7 @@ def disabled():
 #%%
 dots = sp.Symbol("...")
 f_f = sp.Function("f")(s_z[1], dots, s_z[s_N])
+s_q = sp.IndexedBase("q")
 delta_q = sp.IndexedBase(r"{\Delta}q")
 eq_27_2 = sp.Eq(sp.Integral(eq_27_1.lhs, (s_t, 0, 1)), delta_q[s_i])
 display(eq_27_2)
@@ -54,64 +55,39 @@ eq_27_2 = sp.Eq(f_f, eq_27_2)
 display(eq_27_2)
 
 #%%
-s_K = sp.Symbol("K", integer=True)
-s_k = sp.Symbol("k", integer=True)
 s_p = sp.IndexedBase("p")
-eq_27_3_generic = sp.Eq(
-    f_r,
-    sp.Sum(
-            s_p[s_i,s_k]*sp.binomial(s_K, s_k) * 
-            (1-s_t)**(s_K-s_k) * 
-            s_t**s_k,
-        (s_k, 0, s_K)))
-display(eq_27_3_generic)
-eq_27_3_quintic = eq_27_3_generic.subs(s_K, 5)
-display(eq_27_3_quintic)
-eq_27_3_quintic = eq_27_3_quintic.doit()
-display(eq_27_3_quintic)
-test = sp.integrate(eq_27_1.rhs, (s_t, 0, sp.Rational(1, 5))).simplify()
-w = sp.IndexedBase("w")
-
-temp = 4
-s_j = sp.Symbol("j", integer=True)
-f_r2 = sp.IndexedBase(sp.Function("r")(s_j / temp))
-test = sp.binomial(temp, s_j) * s_t**s_j * (1 - s_t)**(temp - s_j) * f_r2[s_i]
-display(test)
-#549
-#257
-test2 = eq_27_1.rhs.subs(s_t, sp.Rational(1, 4))
-display(test2.simplify()*512)
-#test = test.replace(r2[s_i], eq_27_1.rhs.subs(s_t, s_j / temp))
-#display(test.subs(s_j, 1).simplify()*128)
-#test.xreplace()
+s_w = sp.IndexedBase("w")
+eq_p0 = sp.Eq(s_p[s_i, 0], s_q[s_i-1])
+eq_p1 = sp.Eq(s_p[s_i, 1], s_p[s_i, 0] + sp.Rational(1,5) * s_w[s_i,0]**2)
+eq_p2 = sp.Eq(s_p[s_i, 2], s_p[s_i, 1] + sp.Rational(1,5) * s_w[s_i,0]*s_w[s_i,1])
+eq_p3 = sp.Eq(s_p[s_i, 3], 
+    s_p[s_i, 2] +
+    sp.Rational(2,15) * s_w[s_i,1]**2 +
+    sp.Rational(1, 15) * s_w[s_i,0]*s_w[s_i, 2])
+eq_p4 = sp.Eq(s_p[s_i, 4], s_p[s_i, 3] + sp.Rational(1,5) * s_w[s_i,1]*s_w[s_i,2])
+eq_p5 = sp.Eq(s_p[s_i, 5], s_p[s_i, 4] + sp.Rational(1,5) * s_w[s_i,2]**2)
+display(eq_p0)
+display(eq_p1)
+display(eq_p2)
+display(eq_p3)
+display(eq_p4)
+display(eq_p5)
 
 #%%
-t0 = eq_27_1.rhs.subs(s_t, sp.Rational(0, 4).subs(s_i, 0).simplify())
-t1 = eq_27_1.rhs.subs(s_t, sp.Rational(1, 4).simplify())
-t2 = eq_27_1.rhs.subs(s_t, sp.Rational(2, 4).simplify())
-t3 = eq_27_1.rhs.subs(s_t, sp.Rational(3, 4).simplify())
-t4 = eq_27_1.rhs.subs(s_t, sp.Rational(4, 4).simplify())
-display(t0)
-display(t1)
-display(t2)
-display(t3)
-display(t4)
-display(eq_27_1)
-display((sp.Rational(1,2)*(s_z[s_i-1] + s_z[s_i])*s_z[s_i]).simplify())
-# this works, but not with deep=True
-display(eq_27_1.rhs.expand(deep=False).collect([(1-s_t)**4], evaluate=False)[(1-s_t)**4])
-display(eq_27_1.rhs.expand().simplify())
-a = sp.Symbol("a")
-temp = eq_27_1.rhs.expand().collect(s_t)
-display(temp.collect((1-s_t)**4))
-expanded = eq_27_1.rhs.expand(deep=False)
-factors = [
-        (1-s_t)**4,
-        (1-s_t)**3 * s_t,
-        (1-s_t)**2 * s_t**2,
-        (1-s_t) * s_t**3,
-        s_t**4
-    ]
-collected = expanded.collect(factors, evaluate=False)
-for _k, _v in collected.items():
-    print(_v)
+eq_w0 = sp.Eq(s_w[s_i, 0], sp.Rational(1, 2) * (s_z[s_i-1] + s_z[s_i]))
+eq_w1 = sp.Eq(s_w[s_i, 1], s_z[s_i])
+eq_w2 = sp.Eq(s_w[s_i, 2], sp.Rational(1, 2) * (s_z[s_i] + s_z[s_i + 1]))
+display(eq_w0)
+display(eq_w1)
+display(eq_w2)
+
+#%%
+s_k = sp.Symbol("k", integer=True)
+eq_r_bezier = sp.Eq(
+    f_r[s_i],
+    sp.Sum(
+            s_p[s_i,s_k]*sp.binomial(5, s_k) * 
+            (1-s_t)**(5-s_k) * 
+            s_t**s_k,
+        (s_k, 0, 5)))
+display(eq_r_bezier)
