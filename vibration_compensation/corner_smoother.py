@@ -12,17 +12,15 @@ class CornerSmoother(object):
         self.maximum_error = maximum_error
 
     def generate_corners(self, data: Data):
-        P0 = data.start_xy[:-1].T
-        P1 = data.end_xy[:-1].T
-        P2 = data.end_xy[1:].T
         # Some lines have zero length, but let's still do the calculations and ignore them later
         with np.errstate(invalid="ignore"):
-            vector_a = P1 - P0
-            vector_b = P2 - P1
-            length_a = np.linalg.norm(vector_a, axis=0)
-            length_b = np.linalg.norm(vector_b, axis=0)
-            T0 = vector_a / length_a
-            T1 = vector_b / length_b
+            vectors = data.end_xy.T - data.start_xy.T
+            lengths = np.linalg.norm(vectors, axis=0)
+            normalized_vecs = vectors / lengths
+            length_a = lengths[:-1]
+            length_b = lengths[1:]
+            T0 = normalized_vecs[:,:-1]
+            T1 = normalized_vecs[:,1:]
             T0_plus_T1 = T0 + T1
             T2 = T0_plus_T1 / np.linalg.norm(T0_plus_T1, axis=0)
             dot_product = np.einsum('ji,ji->i', T0, T1)
@@ -35,9 +33,7 @@ class CornerSmoother(object):
         T0 = T0[:,valid_segments]
         T1 = T1[:,valid_segments]
         T2 = T2[:,valid_segments]
-        P1 = P1[:,valid_segments]
-        P0 = P0[:,valid_segments]
-        P2 = P2[:,valid_segments]
+        P1 = data.end_xy[:-1].T[:,valid_segments]
         angle = angle[valid_segments]
         half_angle = angle / 2.0
         cos_half_angle = np.cos(half_angle)
@@ -79,18 +75,63 @@ class CornerSmoother(object):
         B10 = P1 + (2.0 * l + l_prime) * T1
         B11 = P1 + (3.0 * l + l_prime) * T1
 
-        valid_segments_mapper = np.empty(data.curve.shape[0], dtype=valid_segments.dtype)
-        valid_segments_mapper[:-1] = valid_segments
-        valid_segments_mapper[-1] = False
-        data.curve[valid_segments_mapper,0] = B0.T
-        data.curve[valid_segments_mapper,1] = B1.T
-        data.curve[valid_segments_mapper,2] = B2.T
-        data.curve[valid_segments_mapper,3] = B3.T
-        data.curve[valid_segments_mapper,4] = B4.T
-        data.curve[valid_segments_mapper,5] = B5.T
-        data.curve[valid_segments_mapper,6] = B6.T
-        data.curve[valid_segments_mapper,7] = B7.T
-        data.curve[valid_segments_mapper,8] = B8.T
-        data.curve[valid_segments_mapper,9] = B9.T
-        data.curve[valid_segments_mapper,10] = B10.T
-        data.curve[valid_segments_mapper,11] = B11.T
+        curves = np.empty((data.start_xy.shape[0], 3, 6, 2))
+        curves[:,:,0,0] = np.nan
+
+        end_segment_mapper = np.empty(data.curve.shape[0], dtype=valid_segments.dtype)
+        end_segment_mapper[:-1] = valid_segments
+        end_segment_mapper[-1] = False
+        curves[end_segment_mapper,2,0] = B0.T
+        curves[end_segment_mapper,2,1] = B1.T
+        curves[end_segment_mapper,2,2] = B2.T
+        curves[end_segment_mapper,2,3] = B3.T
+        curves[end_segment_mapper,2,4] = B4.T
+        curves[end_segment_mapper,2,5] = B5.T
+        start_segment_mapper = np.empty(data.curve.shape[0], dtype=valid_segments.dtype)
+        start_segment_mapper[1:] = valid_segments
+        start_segment_mapper[0] = False
+        curves[start_segment_mapper,0,0] = B6.T
+        curves[start_segment_mapper,0,1] = B7.T
+        curves[start_segment_mapper,0,2] = B8.T
+        curves[start_segment_mapper,0,3] = B9.T
+        curves[start_segment_mapper,0,4] = B10.T
+        curves[start_segment_mapper,0,5] = B11.T
+
+        curve_lengths = np.full((data.curve.shape[0], 3), 0.0)
+        curve_lengths[:,1] = lengths
+        curve_lengths[end_segment_mapper, 2] = l
+        curve_lengths[start_segment_mapper, 0] = l
+        curve_lengths[:,1] -= curve_lengths[:,0]
+        curve_lengths[:,1] -= curve_lengths[:,2]
+
+        middle_start = data.start_xy.T + normalized_vecs * curve_lengths[:,0]
+        middle_end = data.start_xy.T + normalized_vecs * curve_lengths[:,1]
+
+        a = (middle_end - middle_start).T / 5.0
+
+        curves[:,1,0] = middle_start.T
+        curves[:,1,1] = curves[:,1,0] + a
+        curves[:,1,2] = curves[:,1,1] + a
+        curves[:,1,3] = curves[:,1,2] + a
+        curves[:,1,4] = curves[:,1,3] + a
+        curves[:,1,5] = curves[:,1,4] + a
+
+        curves2 = curves.reshape((3*curves.shape[0], 6, 2))
+        lengths2 = curve_lengths.reshape(3*curve_lengths.shape[0])
+
+        valid_curves = np.greater(lengths2, 0.0)
+
+        data.curves = np.array(curves2[valid_curves], copy=True)
+
+        data.curve[end_segment_mapper,0] = B0.T
+        data.curve[end_segment_mapper,1] = B1.T
+        data.curve[end_segment_mapper,2] = B2.T
+        data.curve[end_segment_mapper,3] = B3.T
+        data.curve[end_segment_mapper,4] = B4.T
+        data.curve[end_segment_mapper,5] = B5.T
+        data.curve[end_segment_mapper,6] = B6.T
+        data.curve[end_segment_mapper,7] = B7.T
+        data.curve[end_segment_mapper,8] = B8.T
+        data.curve[end_segment_mapper,9] = B9.T
+        data.curve[end_segment_mapper,10] = B10.T
+        data.curve[end_segment_mapper,11] = B11.T

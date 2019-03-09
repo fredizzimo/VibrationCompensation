@@ -17,6 +17,7 @@ def figures():
     yield ret
     plt.save(ret)
 
+
 def generate_curves(gcode, maximum_error):
     data = read_gcode(gcode)
     smoother = CornerSmoother(maximum_error=maximum_error)
@@ -45,9 +46,8 @@ def plotter(figures, request):
             line_color="red",
             line_dash="dotted"
         )
-        valid_curves = ~np.isnan(data.curve[:,0,0])
-        if data.curve[valid_curves].shape[0] > 0:
-            spline = PHSpline(data.curve[valid_curves])
+        if data.curves.shape[0] > 0:
+            spline = PHSpline(data.curves)
             points = spline(np.linspace(0, 1, 10000))
 
             p.line(
@@ -219,6 +219,7 @@ def test_three_long_lines(plotter):
     assert np.linalg.norm(data.end_xy[1] - spline(0.5)) == pytest.approx(0.01, abs=1e-12)
     assert point_on_line(data.start_xy[2], data.end_xy[2], spline(1)) == pytest.approx(0, abs=1e-12)
     plotter(data)
+
 
 def test_three_short_lines(plotter):
     data = generate_curves([
