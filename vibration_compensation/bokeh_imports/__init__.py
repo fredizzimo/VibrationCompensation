@@ -1,5 +1,5 @@
 from bokeh.models import Slider, ColorBar
-from bokeh.plotting import Figure
+from bokeh.plotting import Figure, output_file, show, save
 from bokeh.models.sources import ColumnDataSource
 from bokeh.layouts import layout
 from bokeh.application import Application

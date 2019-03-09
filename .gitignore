@@ -82,3 +82,5 @@ environment*
 .ipynb_checkpoints
 notebooks/exported
 
+**/tests/output
+
