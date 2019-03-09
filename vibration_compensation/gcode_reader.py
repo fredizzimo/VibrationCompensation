@@ -1,7 +1,7 @@
-import numpy as np
 from .data import Data
+from io import IOBase
 
-def read_gcode(f):
+def read_gcode_lines(lines):
     move_commands = {
         "start_x": [],
         "start_y": [],
@@ -24,7 +24,7 @@ def read_gcode(f):
 
 
     # NOTE currently assumes that moves are absolute and extrudes relative
-    for l in f.readlines():
+    for l in lines:
         l = l.strip().lower()
         l = l.split(";")[0]
         if l.startswith("g1"):
@@ -56,3 +56,9 @@ def read_gcode(f):
 
 
     return Data(move_commands, layer_index)
+
+def read_gcode(gcode):
+    if  issubclass(type(gcode), IOBase):
+        return read_gcode_lines(gcode.readlines())
+    else:
+        return read_gcode_lines(gcode)
