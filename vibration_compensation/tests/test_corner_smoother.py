@@ -81,6 +81,17 @@ def test_straight_line(plotter):
     plotter(data)
 
 
+def test_two_straight_lines(plotter):
+    data = generate_curves([
+        "G1 X50 Y50",
+        "G1 X100 Y100"
+    ], maximum_error=0.01)
+    assert_array_almost_equal(data.start_xy, [[0, 0], [50, 50]])
+    assert_array_almost_equal(data.end_xy, [[50, 50], [100, 100]])
+    assert_array_equal(data.curve, np.full((2, 12, 2), np.nan))
+    plotter(data)
+
+
 def test_90_corner(plotter):
     data = generate_curves([
         "G1 X100 Y0",

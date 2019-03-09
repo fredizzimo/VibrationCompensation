@@ -27,7 +27,7 @@ class CornerSmoother(object):
             T2 = T0_plus_T1 / np.linalg.norm(T0_plus_T1, axis=0)
             dot_product = np.einsum('ji,ji->i', T0, T1)
             angle = np.arccos(dot_product)
-            valid_segments = np.greater(angle, 0)
+            valid_segments = np.greater(angle, 1e-6)
 
         # Eq 19 helper variables
         length_a = length_a[valid_segments]
