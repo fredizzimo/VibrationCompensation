@@ -81,16 +81,23 @@ display(eq_w0)
 display(eq_w1)
 display(eq_w2)
 
+#%% [markdown]
+# # The generic Bezier form
+
 #%%
 s_k = sp.Symbol("k", integer=True)
+s_K = sp.Symbol("K", integer=True)
 eq_r_bezier = sp.Eq(
     f_r[s_i],
     sp.Sum(
-            s_p[s_i,s_k]*sp.binomial(5, s_k) * 
-            (1-s_t)**(5-s_k) * 
+            s_p[s_i,s_k]*sp.binomial(s_K, s_k) * 
+            (1-s_t)**(s_K-s_k) * 
             s_t**s_k,
-        (s_k, 0, 5)))
+        (s_k, 0, s_K)))
 display(eq_r_bezier)
+
+#%% [markdown]
+# # Calculate the formula for a straight quintic line
 
 #%%
 def calculate_line():
@@ -113,8 +120,7 @@ def calculate_line():
     display(eq_line5)
     display(eq_line6)
 
-    #display(eq_r_bezier.doit().diff(s_t, 2).subs(s_t, 0))
-    expanded_curve = eq_r_bezier.rhs.doit()
+    expanded_curve = eq_r_bezier.rhs.subs(s_K, 5).doit()
     expanded_curve = expanded_curve.subs(eq_p5.lhs, eq_p5.rhs)
     expanded_curve = expanded_curve.subs(eq_p4.lhs, eq_p4.rhs)
     expanded_curve = expanded_curve.subs(eq_p3.lhs, eq_p3.rhs)
@@ -189,3 +195,22 @@ def calculate_line():
     return eq_p0_line, eq_p1_line, eq_p3_line, eq_p4_line, eq_p5_line
 
 eq_p0_line, eq_p1_line, eq_p3_line, eq_p4_line, eq_p5_line = calculate_line()
+
+#%% [markdown]
+# # The matrix form of ph splines
+
+#%%
+def generate_matrix_form(degree):
+    # See https://pomax.github.io/bezierinfo/#matrix
+    bezier_without_points = eq_r_bezier.rhs.replace(s_p[s_i,s_k], 1)
+    expanded = bezier_without_points.subs(s_K, degree).doit()
+    coeffs = [sp.Poly(arg).coeffs() for arg in expanded.args]
+    coeffs = sorted(coeffs, key=len)
+    coeffs = [coeff + [0]*(len(coeffs)-len(coeff)) for coeff in coeffs]
+    coeff_matrix = sp.Matrix(coeffs)
+    t_matrix = sp.Matrix([s_t**i for i in range(degree + 1)]).T
+    p_matrix = sp.Matrix([s_p[s_i, i] for i in range(degree + 1)])
+    return sp.MatMul(t_matrix, coeff_matrix, p_matrix)
+display("Cubic", generate_matrix_form(3))
+display("Quintic", generate_matrix_form(5))
+display("Undecic (11th degree", generate_matrix_form(11))
