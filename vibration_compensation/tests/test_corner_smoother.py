@@ -75,9 +75,13 @@ def test_straight_line(plotter):
     data = generate_curves([
         "G1 X100 Y200"
     ], maximum_error=0.01)
-    assert_array_almost_equal(data.start_xy, [[0, 0]])
-    assert_array_almost_equal(data.end_xy, [[100, 200]])
-    assert_array_equal(data.curve, np.full((1, 12, 2), np.nan))
+    assert data.curves.shape[0] == 1
+    spline = PHSpline([data.curves[0]])
+    assert_array_almost_equal(spline(0), [0, 0])
+    assert point_on_middle_of_line(data.start_xy[0], data.end_xy[0], spline(0.5)) ==\
+           pytest.approx(0, abs=1e-12)
+    assert_array_almost_equal(spline(1), [100, 200])
+
     plotter(data)
 
 
@@ -86,9 +90,19 @@ def test_two_straight_lines(plotter):
         "G1 X50 Y50",
         "G1 X100 Y100"
     ], maximum_error=0.01)
-    assert_array_almost_equal(data.start_xy, [[0, 0], [50, 50]])
-    assert_array_almost_equal(data.end_xy, [[50, 50], [100, 100]])
-    assert_array_equal(data.curve, np.full((2, 12, 2), np.nan))
+    assert data.curves.shape[0] == 2
+    spline = PHSpline([data.curves[0]])
+    assert_array_almost_equal(spline(0), [0, 0])
+    assert point_on_middle_of_line(data.start_xy[0], data.end_xy[0], spline(0.5)) == \
+           pytest.approx(0, abs=1e-12)
+    assert_array_almost_equal(spline(1), [50, 50])
+
+    spline = PHSpline([data.curves[1]])
+    assert_array_almost_equal(spline(0), [50, 50])
+    assert point_on_middle_of_line(data.start_xy[1], data.end_xy[1], spline(0.5)) == \
+           pytest.approx(0, abs=1e-12)
+    assert_array_almost_equal(spline(1), [100, 100])
+
     plotter(data)
 
 
@@ -97,14 +111,29 @@ def test_90_corner(plotter):
         "G1 X100 Y0",
         "G1 X100 Y100"
     ], maximum_error=0.01)
-    assert_array_almost_equal(data.start_xy, [[0, 0], [100, 0]])
-    assert_array_almost_equal(data.end_xy, [[100, 0], [100, 100]])
-    spline = PHSpline([data.curve[0]])
-    assert point_on_line(data.start_xy[0], data.end_xy[0], spline(0)) == pytest.approx(0, abs=1e-12)
-    assert np.linalg.norm(data.end_xy[0] - spline(0.5)) == pytest.approx(0.01, abs=1e-12)
-    assert point_on_line(data.start_xy[1], data.end_xy[1], spline(1)) == pytest.approx(0, abs=1e-12)
-    # No second curve
-    assert_array_equal(data.curve[1], np.full((12, 2), np.nan))
+    assert data.curves.shape[0] == 4
+
+    spline0 = PHSpline([data.curves[0]])
+    assert_array_almost_equal(spline0(0.0), [0, 0])
+    assert point_on_line(data.start_xy[0], data.end_xy[0], spline0(0.5)) == \
+           pytest.approx(0, abs=1e-12)
+    assert point_on_line(data.start_xy[0], data.end_xy[0], spline0(1.0)) == \
+           pytest.approx(0, abs=1e-12)
+
+    spline1 = PHSpline([data.curves[1]])
+    assert_array_almost_equal(spline0(1), spline1(0.0))
+    assert np.linalg.norm(data.end_xy[0] - spline1(0.5)) == pytest.approx(0.01, abs=1e-12)
+
+    spline2 = PHSpline([data.curves[2]])
+    assert_array_almost_equal(spline1(0.5), spline2(0.5))
+    assert point_on_line(data.start_xy[1], data.end_xy[1], spline2(1.0)) ==\
+           pytest.approx(0, abs=1e-12)
+
+    spline3 = PHSpline([data.curves[3]])
+    assert_array_almost_equal(spline2(1.0), spline3(0.0))
+    assert point_on_line(data.start_xy[1], data.end_xy[1], spline3(0.5)) == \
+           pytest.approx(0, abs=1e-12)
+    assert_array_almost_equal(spline3(1), [100.0, 100.0])
     plotter(data)
 
 
@@ -120,7 +149,7 @@ def test_45_corner(plotter):
     plotter(data)
 
 
-def test_very_sharp_corner(plotter):
+def test_very_acute_corner(plotter):
     data = generate_curves([
         "G1 X100 Y0",
         "G1 X0 Y1"
@@ -144,7 +173,7 @@ def test_135_corner(plotter):
     plotter(data)
 
 
-def test_very_dull_corner(plotter):
+def test_very_obtuse_corner(plotter):
     data = generate_curves([
         "G1 X100 Y0",
         "G1 X200 Y1"
@@ -158,7 +187,7 @@ def test_very_dull_corner(plotter):
     plotter(data)
 
 
-def test_dull_corner_with_short_lines(plotter):
+def test_obtuse_corner_with_short_lines(plotter):
     data = generate_curves([
         "G1 X10 Y0",
         "G1 X20 Y0.1"
@@ -173,7 +202,7 @@ def test_dull_corner_with_short_lines(plotter):
     plotter(data)
 
 
-def test_dull_corner_with_shorter_and_longer_line(plotter):
+def test_obtuse_corner_with_shorter_and_longer_line(plotter):
     data = generate_curves([
         "G1 X10 Y0",
         "G1 X30 Y0.1"
@@ -187,7 +216,7 @@ def test_dull_corner_with_shorter_and_longer_line(plotter):
     plotter(data)
 
 
-def test_dull_corner_with_longer_and_shorter_line(plotter):
+def test_obtuse_corner_with_longer_and_shorter_line(plotter):
     data = generate_curves([
         "G1 X20 Y0",
         "G1 X30 Y-0.1"
