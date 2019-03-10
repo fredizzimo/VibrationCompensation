@@ -214,3 +214,82 @@ def generate_matrix_form(degree):
 display("Cubic", generate_matrix_form(3))
 display("Quintic", generate_matrix_form(5))
 display("Undecic (11th degree", generate_matrix_form(11))
+
+#%% [markdown]
+# # The splitting of ph splines
+
+#%%
+# See https://pomax.github.io/bezierinfo/#splitting
+def generate_splitting_matrix_first(degree, splitpoint):
+    matrix_form=generate_matrix_form(degree)
+    _, M, P = matrix_form.args
+    Z = sp.Matrix(degree+1, degree+1, lambda i,j: splitpoint**i if i==j else 0)
+    Q = sp.MatMul(M.inverse(), Z, M).doit().simplify()
+    return sp.MatMul(Q,P) 
+
+def generate_splitting_matrix_second(degree, splitpoint):
+    Q, P = generate_splitting_matrix_first(degree, splitpoint).args
+    Q = Q.tolist()
+    def rotate(l, n):
+        return l[-n:] + l[:-n]
+    Q = [rotate(r, len(r)-1-i) for i,r in enumerate(Q)]
+    Q.reverse()
+    Q = sp.Matrix(Q)
+    return sp.MatMul(Q,P)
+
+display(
+    "Cubic", 
+    generate_splitting_matrix_first(3, sp.Symbol("z")),
+    generate_splitting_matrix_second(3, sp.Symbol("z"))
+)
+display(
+    "Quintic", 
+    generate_splitting_matrix_first(5, sp.Symbol("z")),
+    generate_splitting_matrix_second(5, sp.Symbol("z"))
+)
+
+#%% [markdown]
+# # The splititng matrices for the corner 11th degree PHSpline used by the CornerSmoother
+
+#%%
+def generate_corner_splitting_matrices():
+    splitting_matrix_first_half = generate_splitting_matrix_first(11, sp.Rational(1,2)).doit()
+    splitting_matrix_second_half = generate_splitting_matrix_second(11, sp.Rational(1,2)).doit()
+    l = sp.Symbol("l")
+    l_prime = sp.Symbol("l'")
+    P1 = sp.Symbol("P1")
+    T0 = sp.Symbol("T0")
+    T1 = sp.Symbol("T1")
+    T2 = sp.Symbol("T2")
+
+    B0 = P1 - (3*l + l_prime) * T0
+    B1 = P1 - (2*l + l_prime) * T0
+    B2 = P1 - (l + l_prime) * T0
+    B3 = P1 - l_prime * T0
+    B4 = B3 + sp.Rational(5, 6) * l * T0 + sp.Rational(1, 6.0) * l * T2
+    B5 = B4 + sp.Rational(10, 21) * l * T0 + sp.Rational(11, 21) * l * T2
+    B6 = B5 + l * T2
+    B7 = B6 + (sp.Rational(10, 21) * l) * T1 + sp.Rational(11, 21) * l * T2
+    B8 = P1 + l_prime * T1
+    B9 = P1 + (l + l_prime) * T1
+    B10 = P1 + (2 * l + l_prime) * T1
+    B11 = P1 + (3 * l + l_prime) * T1
+
+    def substitute(m):
+        return (m.
+            subs(s_p[s_i,0], B0).
+            subs(s_p[s_i,1], B1).
+            subs(s_p[s_i,2], B2).
+            subs(s_p[s_i,3], B3).
+            subs(s_p[s_i,4], B4).
+            subs(s_p[s_i,5], B5).
+            subs(s_p[s_i,6], B6).
+            subs(s_p[s_i,7], B7).
+            subs(s_p[s_i,8], B8).
+            subs(s_p[s_i,9], B9).
+            subs(s_p[s_i,10], B10).
+            subs(s_p[s_i,11], B11)
+        ).simplify()
+    return  substitute(splitting_matrix_first_half), substitute(splitting_matrix_second_half)
+
+display(generate_corner_splitting_matrices())
