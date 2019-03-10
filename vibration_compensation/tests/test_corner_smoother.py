@@ -122,10 +122,10 @@ def test_90_corner(plotter):
 
     spline1 = PHSpline([data.curves[1]])
     assert_array_almost_equal(spline0(1), spline1(0.0))
-    assert np.linalg.norm(data.end_xy[0] - spline1(0.5)) == pytest.approx(0.01, abs=1e-12)
+    assert np.linalg.norm(data.end_xy[0] - spline1(1.0)) == pytest.approx(0.01, abs=1e-12)
 
     spline2 = PHSpline([data.curves[2]])
-    assert_array_almost_equal(spline1(0.5), spline2(0.5))
+    assert_array_almost_equal(spline1(1.0), spline2(0.0))
     assert point_on_line(data.start_xy[1], data.end_xy[1], spline2(1.0)) ==\
            pytest.approx(0, abs=1e-12)
 
