@@ -1,0 +1,12 @@
+For z-hop
+1. Do a normal optimization
+2. If the z-axis can't move in time for an obstacle
+    * require that the time is exactly the needed time
+    * use the first half of the movement for the optimization time
+       * This should ensure that we get maximum acceleration in the beggining
+    * For the vibration compensation, split the curve in two, to make sure that we get the required
+      acceleration in the beginning
+
+To detect obstacles
+   Brezenheim can probably be used for detecting where we cross perimeters and other features
+   Can information from last N layers do detect how far up you actually need to be
