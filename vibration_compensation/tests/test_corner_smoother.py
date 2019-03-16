@@ -1,5 +1,5 @@
 import os
-from vibration_compensation import read_gcode, CornerSmoother, PHSpline
+from vibration_compensation import read_gcode, CornerSmoother, PHSpline, Data
 
 import pytest
 from numpy.testing import *
@@ -27,7 +27,7 @@ def generate_curves(gcode, maximum_error):
 
 @pytest.fixture(scope="function")
 def plotter(figures, request):
-    def plot(data):
+    def plot(data: Data):
         p = plt.Figure(
             plot_width=1000,
             plot_height=1000,
@@ -46,9 +46,8 @@ def plotter(figures, request):
             line_color="red",
             line_dash="dotted"
         )
-        if data.curves.shape[0] > 0:
-            spline = PHSpline(data.curves)
-            points = spline(np.linspace(0, 1, 10000))
+        if data.xy_spline is not None:
+            points = data.xy_spline(np.linspace(0, 1, 10000))
 
             p.line(
                 points[:,0],
@@ -73,92 +72,101 @@ def point_on_middle_of_line(linea, lineb, point):
 
 
 def straight_segment(data, l, s, start, end):
-    spline = PHSpline([data.curves[s]])
-    start_point = data.start_xy[l]
-    end_point = data.end_xy[l]
-    if start == "start":
-        assert_array_almost_equal(spline(0.0), start_point)
-    elif start == "on":
-        assert point_on_line(start_point, end_point, spline(0.0)) ==\
-            pytest.approx(0, abs=1e-12)
-    elif start == "middle":
-        assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
-            pytest.approx(0, abs=1e-3)
-    else:
-        assert False, "Invalid start type"
-    if start == "start" and end == "end":
-        assert point_on_middle_of_line(start_point, end_point, spline(0.5)) == \
-               pytest.approx(0, abs=1e-12)
-    else:
-        assert point_on_line(start_point, end_point, spline(0.5)) == \
-               pytest.approx(0, abs=1e-12)
-    if end == "end":
-        assert_array_almost_equal(spline(1.0), end_point)
-    elif end == "on":
-        assert point_on_line(start_point, end_point, spline(1.0)) == \
-               pytest.approx(0, abs=1e-12)
-    elif end == "middle":
-        assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
-               pytest.approx(0, abs=1e-3)
-    else:
-        assert False, "Invalid end type"
+    try:
+        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
+        start_point = data.start_xy[l]
+        end_point = data.end_xy[l]
+        if start == "start":
+            assert_array_almost_equal(spline(0.0), start_point)
+        elif start == "on":
+            assert point_on_line(start_point, end_point, spline(0.0)) ==\
+                pytest.approx(0, abs=1e-12)
+        elif start == "middle":
+            assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
+                pytest.approx(0, abs=1e-3)
+        else:
+            assert False, "Invalid start type"
+        if start == "start" and end == "end":
+            assert point_on_middle_of_line(start_point, end_point, spline(0.5)) == \
+                   pytest.approx(0, abs=1e-12)
+        else:
+            assert point_on_line(start_point, end_point, spline(0.5)) == \
+                   pytest.approx(0, abs=1e-12)
+        if end == "end":
+            assert_array_almost_equal(spline(1.0), end_point)
+        elif end == "on":
+            assert point_on_line(start_point, end_point, spline(1.0)) == \
+                   pytest.approx(0, abs=1e-12)
+        elif end == "middle":
+            assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
+                   pytest.approx(0, abs=1e-3)
+        else:
+            assert False, "Invalid end type"
 
-    if s > 0:
-        prev_spline = PHSpline([data.curves[s-1]])
-        assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+        if s > 0:
+            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
+            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+    except Exception as e:
+        raise AssertionError(e)
 
 
 def start_corner_segment(data, l, s, start, curve):
-    spline = PHSpline([data.curves[s]])
-    start_point = data.start_xy[l]
-    end_point = data.end_xy[l]
-    if start == "on":
-        assert point_on_line(start_point, end_point, spline(0.0)) == \
-               pytest.approx(0, abs=1e-12)
-    elif start == "middle":
-        assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
-               pytest.approx(0, abs=1e-3)
-    else:
-        assert False, "Invalid start type"
-    if curve=="normal":
-        assert np.linalg.norm(end_point - spline(1.0)) == pytest.approx(0.01, abs=1e-12)
-    elif curve=="cut_short":
-        assert np.linalg.norm(end_point - spline(1.0)) <= 0.01
-    else:
-        assert False, "Invalid curve type"
-    if s > 0:
-        prev_spline = PHSpline([data.curves[s-1]])
-        assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+    try:
+        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
+        start_point = data.start_xy[l]
+        end_point = data.end_xy[l]
+        if start == "on":
+            assert point_on_line(start_point, end_point, spline(0.0)) == \
+                   pytest.approx(0, abs=1e-12)
+        elif start == "middle":
+            assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
+                   pytest.approx(0, abs=1e-3)
+        else:
+            assert False, "Invalid start type"
+        if curve=="normal":
+            assert np.linalg.norm(end_point - spline(1.0)) == pytest.approx(0.01, abs=1e-12)
+        elif curve=="cut_short":
+            assert np.linalg.norm(end_point - spline(1.0)) <= 0.01
+        else:
+            assert False, "Invalid curve type"
+        if s > 0:
+            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
+            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+    except Exception as e:
+        raise AssertionError(e)
 
 
 def end_corner_segment(data, l, s, end, curve):
-    spline = PHSpline([data.curves[s]])
-    start_point = data.start_xy[l]
-    end_point = data.end_xy[l]
-    if curve=="normal":
-        assert np.linalg.norm(start_point - spline(0.0)) == pytest.approx(0.01, abs=1e-12)
-    elif curve=="cut_short":
-        assert np.linalg.norm(start_point - spline(0.0)) <= 0.01
-    else:
-        assert False, "Invalid curve type"
-    if end == "on":
-        assert point_on_line(start_point, end_point, spline(1.0)) == \
-               pytest.approx(0, abs=1e-12)
-    elif end == "middle":
-        assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
-               pytest.approx(0, abs=1e-3)
-    else:
-        assert False, "Invalid end type"
-    if s > 0:
-        prev_spline = PHSpline([data.curves[s-1]])
-        assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+    try:
+        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
+        start_point = data.start_xy[l]
+        end_point = data.end_xy[l]
+        if curve=="normal":
+            assert np.linalg.norm(start_point - spline(0.0)) == pytest.approx(0.01, abs=1e-12)
+        elif curve=="cut_short":
+            assert np.linalg.norm(start_point - spline(0.0)) <= 0.01
+        else:
+            assert False, "Invalid curve type"
+        if end == "on":
+            assert point_on_line(start_point, end_point, spline(1.0)) == \
+                   pytest.approx(0, abs=1e-12)
+        elif end == "middle":
+            assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
+                   pytest.approx(0, abs=1e-3)
+        else:
+            assert False, "Invalid end type"
+        if s > 0:
+            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
+            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
+    except Exception as e:
+        raise AssertionError(e)
 
 
 def test_straight_line(plotter):
     data = generate_curves([
         "G1 X100 Y200"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 1
+    assert data.xy_spline.control_points.shape[1] == 1
     straight_segment(data, l=0, s=0, start="start", end="end")
     plotter(data)
 
@@ -168,7 +176,7 @@ def test_two_straight_lines(plotter):
         "G1 X50 Y50",
         "G1 X100 Y100"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 2
+    assert data.xy_spline.control_points.shape[1] == 2
     straight_segment(data, l=0, s=0, start="start", end="end")
     straight_segment(data, l=1, s=1, start="start", end="end")
     plotter(data)
@@ -179,7 +187,7 @@ def test_90_corner(plotter):
         "G1 X100 Y0",
         "G1 X100 Y100"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -192,7 +200,7 @@ def test_45_corner(plotter):
         "G1 X100 Y0",
         "G1 X0 Y100"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -205,7 +213,7 @@ def test_very_acute_corner(plotter):
         "G1 X100 Y0",
         "G1 X0 Y1"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -218,7 +226,8 @@ def test_135_corner(plotter):
         "G1 X100 Y0",
         "G1 X200 Y100"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
+    straight_segment(data, l=0, s=0, start="start", end="on")
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -231,7 +240,7 @@ def test_very_obtuse_corner(plotter):
         "G1 X100 Y0",
         "G1 X200 Y1"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -244,7 +253,7 @@ def test_obtuse_corner_with_short_lines(plotter):
         "G1 X10 Y0",
         "G1 X20 Y0.1"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="middle")
     start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
     end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")
@@ -257,7 +266,7 @@ def test_obtuse_corner_with_shorter_and_longer_line(plotter):
         "G1 X10 Y0",
         "G1 X30 Y0.1"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="middle")
     start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
     end_corner_segment(data, l=1, s=2, end="on", curve="cut_short")
@@ -270,7 +279,7 @@ def test_obtuse_corner_with_longer_and_shorter_line(plotter):
         "G1 X20 Y0",
         "G1 X30 Y-0.1"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 4
+    assert data.xy_spline.control_points.shape[1] == 4
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="cut_short")
     end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")
@@ -284,7 +293,7 @@ def test_three_long_lines(plotter):
         "G1 X100 Y100",
         "G1 X0 Y100"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 7
+    assert data.xy_spline.control_points.shape[1] == 7
     straight_segment(data, l=0, s=0, start="start", end="on")
     start_corner_segment(data, l=0, s=1, start="on", curve="normal")
     end_corner_segment(data, l=1, s=2, end="on", curve="normal")
@@ -301,7 +310,7 @@ def test_three_short_lines(plotter):
         "G1 X20 Y0.1",
         "G1 X30 Y0.3"
     ], maximum_error=0.01)
-    assert data.curves.shape[0] == 7
+    assert data.xy_spline.control_points.shape[1] == 7
     straight_segment(data, l=0, s=0, start="start", end="middle")
     start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
     end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")

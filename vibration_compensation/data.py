@@ -1,4 +1,6 @@
 import numpy as np
+from .phspline import PHSpline
+
 class Data:
     def __init__(self, move_commands, layer_index):
         self.start_xy = np.array((move_commands["start_x"], move_commands["start_y"])).T
@@ -10,4 +12,4 @@ class Data:
         self.layer = np.array(move_commands["layer"], dtype=np.int)
         self.layer_index = layer_index
         self.curve = np.full((self.start_xy.shape[0], 12, 2), np.nan)
-
+        self.xy_spline : PHSpline = None

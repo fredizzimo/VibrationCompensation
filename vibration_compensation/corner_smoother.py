@@ -176,7 +176,7 @@ class CornerSmoother(object):
 
         curves2 = curves.reshape((3*curves.shape[0], 12, 2))
         valid_curves = ~np.isnan(curves2[:,0,0])
-        data.curves = np.array(curves2[valid_curves], copy=True)
+        data.xy_spline = PHSpline(np.swapaxes(curves2[valid_curves], 0, 1))
 
         data.curve[end_segment_mapper,0] = B0.T
         data.curve[end_segment_mapper,1] = B1.T
