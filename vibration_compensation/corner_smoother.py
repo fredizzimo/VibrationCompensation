@@ -180,10 +180,9 @@ class CornerSmoother(object):
         valid_curves = ~np.isnan(curves2[:,0,0])
 
         curve_lengths = np.full((data.start_xy.shape[0], 3), 0.0)
-        curve_lengths[start_segment_mapper,0] = 1.0
-        curve_lengths[:,1] = 1.0
-        curve_lengths[end_segment_mapper,2] = 1.0
-
+        curve_lengths[:,0] = np.linalg.norm(middle_start - data.start_xy.T, axis=0)
+        curve_lengths[:,1] = np.linalg.norm(middle_end - middle_start, axis=0)
+        curve_lengths[:,2] = np.linalg.norm(data.end_xy.T - middle_end, axis=0)
         curve_total_lengths = np.sum(curve_lengths, axis=1)
 
         curve_intervals = np.empty((data.start_xy.shape[0], 3))
