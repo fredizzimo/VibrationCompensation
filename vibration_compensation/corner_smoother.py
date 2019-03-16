@@ -174,9 +174,28 @@ class CornerSmoother(object):
         curves[:,1,10] = curves[:,1,9] + a
         curves[:,1,11] = curves[:,1,10] + a
 
+
         curves2 = curves.reshape((3*curves.shape[0], 12, 2))
+
         valid_curves = ~np.isnan(curves2[:,0,0])
-        data.xy_spline = PHSpline(np.swapaxes(curves2[valid_curves], 0, 1))
+
+        curve_lengths = np.full((data.start_xy.shape[0], 3), 0.0)
+        curve_lengths[start_segment_mapper,0] = 1.0
+        curve_lengths[:,1] = 1.0
+        curve_lengths[end_segment_mapper,2] = 1.0
+
+        curve_total_lengths = np.sum(curve_lengths, axis=1)
+
+        curve_intervals = np.empty((data.start_xy.shape[0], 3))
+        curve_intervals[:,0] = np.linspace(0, data.start_xy.shape[0]-1, data.start_xy.shape[0])
+        curve_intervals[:,1] = curve_intervals[:,0] + curve_lengths[:,0] / curve_total_lengths
+        curve_intervals[:,2] = curve_intervals[:,1] + curve_lengths[:,1] / curve_total_lengths
+        curve_intervals = curve_intervals.reshape(3*curve_intervals.shape[0])
+        curve_intervals2 = np.empty(np.sum(valid_curves) + 1)
+        curve_intervals2[:-1] = curve_intervals[valid_curves]
+        curve_intervals2[-1] = data.start_xy.shape[0]
+
+        data.xy_spline = PHSpline(np.swapaxes(curves2[valid_curves], 0, 1), curve_intervals2)
 
         data.curve[end_segment_mapper,0] = B0.T
         data.curve[end_segment_mapper,1] = B1.T

@@ -47,7 +47,7 @@ def plotter(figures, request):
             line_dash="dotted"
         )
         if data.xy_spline is not None:
-            points = data.xy_spline(np.linspace(0, 1, 10000))
+            points = data.xy_spline(np.linspace(0, data.start_xy.shape[0], 10000))
 
             p.line(
                 points[:,0],
@@ -70,96 +70,120 @@ def point_on_middle_of_line(linea, lineb, point):
     mid = (lineb - linea) * 0.5 + linea
     return np.linalg.norm(point - mid)
 
+start_error_segment_exact = "The start point of the spline segment does not match the line start point"
+start_error_segment = "The start point of the spline segment is not on the line"
+start_error_segment_middle = "The start point of the spline segment is not on the middle of the line"
+start_error_segment_close_corner = "The start point of the segment is not close enough to the corner"
+
+middle_error_segment_not_on_middle = "The middle point of the spline segment is not on the middle of the line"
+middle_error_segment_not_on_line = "The middle point of the spline segment is not on the line"
+
+end_error_segment_exact = "The end point of the spline segment does not match the line end point"
+end_error_segment = "The end point of the spline segment is not on the line"
+end_error_segment_middle = "The end point of the spline segment is not on the middle of the line"
+end_error_segment_close_corner = "The end point of the segment is not close enough to the corner"
+
+start_error_spline_exact = "The start point on the full spline does not match the line start point"
+middle_error_spline_not_on_middle = "The middle point of the full spline is not on the middle of the line"
+end_error_spline_exact = "The end point on the full spline does not match the line end point"
+end_error_spline_close_corner = "The end point of the full spline is not close enough to the corner"
+start_error_spline_close_corner = "The start point of the full spline is not close enough to the corner"
+
+start_does_not_match_prev = "The spline segment start does not match the previous segment end"
+
 
 def straight_segment(data, l, s, start, end):
-    try:
-        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
-        start_point = data.start_xy[l]
-        end_point = data.end_xy[l]
-        if start == "start":
-            assert_array_almost_equal(spline(0.0), start_point)
-        elif start == "on":
-            assert point_on_line(start_point, end_point, spline(0.0)) ==\
-                pytest.approx(0, abs=1e-12)
-        elif start == "middle":
-            assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
-                pytest.approx(0, abs=1e-3)
-        else:
-            assert False, "Invalid start type"
-        if start == "start" and end == "end":
-            assert point_on_middle_of_line(start_point, end_point, spline(0.5)) == \
-                   pytest.approx(0, abs=1e-12)
-        else:
-            assert point_on_line(start_point, end_point, spline(0.5)) == \
-                   pytest.approx(0, abs=1e-12)
-        if end == "end":
-            assert_array_almost_equal(spline(1.0), end_point)
-        elif end == "on":
-            assert point_on_line(start_point, end_point, spline(1.0)) == \
-                   pytest.approx(0, abs=1e-12)
-        elif end == "middle":
-            assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
-                   pytest.approx(0, abs=1e-3)
-        else:
-            assert False, "Invalid end type"
+    spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2), [0, 1])
+    start_point = data.start_xy[l]
+    end_point = data.end_xy[l]
+    if start == "start":
+        assert_array_almost_equal(spline(0.0), start_point, err_msg=start_error_segment_exact)
+        assert_array_almost_equal(data.xy_spline(l), start_point, err_msg=start_error_spline_exact)
+    elif start == "on":
+        assert point_on_line(start_point, end_point, spline(0.0)) ==\
+            pytest.approx(0, abs=1e-12), start_error_segment
+    elif start == "middle":
+        assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
+            pytest.approx(0, abs=1e-3), start_error_segment_middle
+    else:
+        assert False, "Invalid start type"
+    if start == "start" and end == "end":
+        assert point_on_middle_of_line(start_point, end_point, spline(0.5)) == \
+               pytest.approx(0, abs=1e-12), middle_error_segment_not_on_middle
+        assert point_on_middle_of_line(start_point, end_point, data.xy_spline(l + 0.5)) == \
+               pytest.approx(0, abs=1e-12), middle_error_spline_not_on_middle
+    else:
+        assert point_on_line(start_point, end_point, spline(0.5)) == \
+               pytest.approx(0, abs=1e-12), middle_error_segment_not_on_line
+    if end == "end":
+        assert_array_almost_equal(spline(1.0), end_point), end_error_segment_exact
+        assert_array_almost_equal(data.xy_spline(l + 1.0), end_point), end_error_spline_exact
+    elif end == "on":
+        assert point_on_line(start_point, end_point, spline(1.0)) == \
+               pytest.approx(0, abs=1e-12), end_error_segment
+    elif end == "middle":
+        assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
+               pytest.approx(0, abs=1e-3), end_error_segment_middle
+    else:
+        assert False, "Invalid end type"
 
-        if s > 0:
-            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
-            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
-    except Exception as e:
-        raise AssertionError(e)
+    if s > 0:
+        prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2), [0, 1])
+        assert_array_almost_equal(spline(0.0), prev_spline(1.0)), start_does_not_match_prev
 
 
 def start_corner_segment(data, l, s, start, curve):
-    try:
-        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
-        start_point = data.start_xy[l]
-        end_point = data.end_xy[l]
-        if start == "on":
-            assert point_on_line(start_point, end_point, spline(0.0)) == \
-                   pytest.approx(0, abs=1e-12)
-        elif start == "middle":
-            assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
-                   pytest.approx(0, abs=1e-3)
-        else:
-            assert False, "Invalid start type"
-        if curve=="normal":
-            assert np.linalg.norm(end_point - spline(1.0)) == pytest.approx(0.01, abs=1e-12)
-        elif curve=="cut_short":
-            assert np.linalg.norm(end_point - spline(1.0)) <= 0.01
-        else:
-            assert False, "Invalid curve type"
-        if s > 0:
-            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
-            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
-    except Exception as e:
-        raise AssertionError(e)
+    spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2), [0, 1])
+    start_point = data.start_xy[l]
+    end_point = data.end_xy[l]
+    if start == "on":
+        assert point_on_line(start_point, end_point, spline(0.0)) == \
+               pytest.approx(0, abs=1e-12), start_error_segment
+    elif start == "middle":
+        assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
+               pytest.approx(0, abs=1e-3), start_error_segment_middle
+    else:
+        assert False, "Invalid start type"
+    if curve == "normal":
+        assert np.linalg.norm(end_point - spline(1.0)) == pytest.approx(0.01, abs=1e-12),\
+            end_error_segment_close_corner
+        assert np.linalg.norm(end_point - data.xy_spline(l + 1.0)) == pytest.approx(0.01, abs=1e-12), \
+            end_error_spline_close_corner
+    elif curve == "cut_short":
+        assert np.linalg.norm(end_point - spline(1.0)) <= 0.01, end_error_segment_close_corner
+        assert np.linalg.norm(end_point - data.xy_spline(l + 1.0)) <= 0.01, end_error_segment_close_corner
+    else:
+        assert False, "Invalid curve type"
+    if s > 0:
+        prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2), [0, 1])
+        assert_array_almost_equal(spline(0.0), prev_spline(1.0)), start_does_not_match_prev
 
 
 def end_corner_segment(data, l, s, end, curve):
-    try:
-        spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2))
-        start_point = data.start_xy[l]
-        end_point = data.end_xy[l]
-        if curve=="normal":
-            assert np.linalg.norm(start_point - spline(0.0)) == pytest.approx(0.01, abs=1e-12)
-        elif curve=="cut_short":
-            assert np.linalg.norm(start_point - spline(0.0)) <= 0.01
-        else:
-            assert False, "Invalid curve type"
-        if end == "on":
-            assert point_on_line(start_point, end_point, spline(1.0)) == \
-                   pytest.approx(0, abs=1e-12)
-        elif end == "middle":
-            assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
-                   pytest.approx(0, abs=1e-3)
-        else:
-            assert False, "Invalid end type"
-        if s > 0:
-            prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2))
-            assert_array_almost_equal(spline(0.0), prev_spline(1.0))
-    except Exception as e:
-        raise AssertionError(e)
+    spline = PHSpline(data.xy_spline.control_points[:,s,:].reshape(12, 1, 2), [0, 1])
+    start_point = data.start_xy[l]
+    end_point = data.end_xy[l]
+    if curve == "normal":
+        assert np.linalg.norm(start_point - spline(0.0)) == pytest.approx(0.01, abs=1e-12),\
+            start_error_segment_close_corner
+        assert np.linalg.norm(start_point - data.xy_spline(l)) == pytest.approx(0.01, abs=1e-12), \
+            start_error_spline_close_corner
+    elif curve == "cut_short":
+        assert np.linalg.norm(start_point - spline(0.0)) <= 0.01, start_error_segment_close_corner
+        assert np.linalg.norm(start_point - data.xy_spline(l)) <= 0.01, start_error_spline_close_corner
+    else:
+        assert False, "Invalid curve type"
+    if end == "on":
+        assert point_on_line(start_point, end_point, spline(1.0)) == \
+               pytest.approx(0, abs=1e-12), end_error_segment
+    elif end == "middle":
+        assert point_on_middle_of_line(start_point, end_point, spline(1.0)) == \
+               pytest.approx(0, abs=1e-3), end_error_segment_middle
+    else:
+        assert False, "Invalid end type"
+    if s > 0:
+        prev_spline = PHSpline(data.xy_spline.control_points[:,s-1,:].reshape(12, 1, 2), [0, 1])
+        assert_array_almost_equal(spline(0.0), prev_spline(1.0)), start_does_not_match_prev
 
 
 def test_straight_line(plotter):
