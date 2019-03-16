@@ -11,5 +11,4 @@ class Data:
         self.f = np.array(move_commands["f"])
         self.layer = np.array(move_commands["layer"], dtype=np.int)
         self.layer_index = layer_index
-        self.curve = np.full((self.start_xy.shape[0], 12, 2), np.nan)
         self.xy_spline : PHSpline = None

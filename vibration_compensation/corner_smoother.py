@@ -62,19 +62,6 @@ class CornerSmoother(object):
         l = eq_l()
         l_prime = eq_l_prime()
 
-        B0 = P1 - (3.0*l + l_prime) * T0
-        B1 = P1 - (2.0*l + l_prime) * T0
-        B2 = P1 - (l + l_prime) * T0
-        B3 = P1 - l_prime * T0
-        B4 = B3 + ((5.0 / 6.0) * l) * T0 + ((1.0 / 6.0) * l) * T2
-        B5 = B4 + ((10.0 / 21.0) * l) * T0 + ((11.0 / 21.0) * l) * T2
-        B6 = B5 + l * T2
-        B7 = B6+ ((10.0 / 21.0) * l) * T1 + ((11.0 / 21.0) * l) * T2
-        B8 = P1 + l_prime * T1
-        B9 = P1 + (l + l_prime) * T1
-        B10 = P1 + (2.0 * l + l_prime) * T1
-        B11 = P1 + (3.0 * l + l_prime) * T1
-
         T0_l = T0 * l
         T0_l_prime = T0 * l_prime
         T1_l = T1 * l
@@ -122,7 +109,7 @@ class CornerSmoother(object):
         curves = np.empty((data.start_xy.shape[0], 3, 12, 2))
         curves[:,:,0,0] = np.nan
 
-        end_segment_mapper = np.empty(data.curve.shape[0], dtype=valid_segments.dtype)
+        end_segment_mapper = np.empty(data.start_xy.shape[0], dtype=valid_segments.dtype)
         end_segment_mapper[:-1] = valid_segments
         end_segment_mapper[-1] = False
         curves[end_segment_mapper,2,0] = C0.T
@@ -137,7 +124,7 @@ class CornerSmoother(object):
         curves[end_segment_mapper,2,9] = C9.T
         curves[end_segment_mapper,2,10] = C10.T
         curves[end_segment_mapper,2,11] = C11.T
-        start_segment_mapper = np.empty(data.curve.shape[0], dtype=valid_segments.dtype)
+        start_segment_mapper = np.empty(data.start_xy.shape[0], dtype=valid_segments.dtype)
         start_segment_mapper[1:] = valid_segments
         start_segment_mapper[0] = False
         curves[start_segment_mapper,0,0] = D0.T
@@ -156,8 +143,8 @@ class CornerSmoother(object):
         middle_start = np.array(data.start_xy.T, copy=True)
         middle_end = np.array(data.end_xy.T, copy=True)
 
-        middle_start[:,start_segment_mapper] = B11
-        middle_end[:,end_segment_mapper] = B0
+        middle_start[:,start_segment_mapper] = D11
+        middle_end[:,end_segment_mapper] = C0
 
         a = (middle_end - middle_start).T / 11.0
 
@@ -174,7 +161,6 @@ class CornerSmoother(object):
         curves[:,1,10] = curves[:,1,9] + a
         curves[:,1,11] = curves[:,1,10] + a
 
-
         curves2 = curves.reshape((3*curves.shape[0], 12, 2))
 
         valid_curves = ~np.isnan(curves2[:,0,0])
@@ -187,24 +173,19 @@ class CornerSmoother(object):
 
         curve_intervals = np.empty((data.start_xy.shape[0], 3))
         curve_intervals[:,0] = np.linspace(0, data.start_xy.shape[0]-1, data.start_xy.shape[0])
-        curve_intervals[:,1] = curve_intervals[:,0] + curve_lengths[:,0] / curve_total_lengths
-        curve_intervals[:,2] = curve_intervals[:,1] + curve_lengths[:,1] / curve_total_lengths
+        curve_intervals[:,1] = curve_intervals[:,0] + \
+                               np.divide(curve_lengths[:,0],
+                                         curve_total_lengths,
+                                         out=np.zeros_like(curve_lengths[:,0]),
+                                         where=curve_total_lengths != 0)
+        curve_intervals[:,2] = curve_intervals[:,1] + \
+                               np.divide(curve_lengths[:,1],
+                                         curve_total_lengths,
+                                         out=np.zeros_like(curve_lengths[:,1]),
+                                         where=curve_total_lengths != 0)
         curve_intervals = curve_intervals.reshape(3*curve_intervals.shape[0])
         curve_intervals2 = np.empty(np.sum(valid_curves) + 1)
         curve_intervals2[:-1] = curve_intervals[valid_curves]
         curve_intervals2[-1] = data.start_xy.shape[0]
 
         data.xy_spline = PHSpline(np.swapaxes(curves2[valid_curves], 0, 1), curve_intervals2)
-
-        data.curve[end_segment_mapper,0] = B0.T
-        data.curve[end_segment_mapper,1] = B1.T
-        data.curve[end_segment_mapper,2] = B2.T
-        data.curve[end_segment_mapper,3] = B3.T
-        data.curve[end_segment_mapper,4] = B4.T
-        data.curve[end_segment_mapper,5] = B5.T
-        data.curve[end_segment_mapper,6] = B6.T
-        data.curve[end_segment_mapper,7] = B7.T
-        data.curve[end_segment_mapper,8] = B8.T
-        data.curve[end_segment_mapper,9] = B9.T
-        data.curve[end_segment_mapper,10] = B10.T
-        data.curve[end_segment_mapper,11] = B11.T

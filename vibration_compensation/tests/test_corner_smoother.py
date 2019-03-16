@@ -73,6 +73,7 @@ def point_on_middle_of_line(linea, lineb, point):
 start_error_segment_exact = "The start point of the spline segment does not match the line start point"
 start_error_segment = "The start point of the spline segment is not on the line"
 start_error_segment_middle = "The start point of the spline segment is not on the middle of the line"
+start_error_segment_end = "The start point of the spline segment is not on the end of the line"
 start_error_segment_close_corner = "The start point of the segment is not close enough to the corner"
 
 middle_error_segment_not_on_middle = "The middle point of the spline segment is not on the middle of the line"
@@ -105,6 +106,8 @@ def straight_segment(data, l, s, start, end):
     elif start == "middle":
         assert point_on_middle_of_line(start_point, end_point, spline(0.0)) == \
             pytest.approx(0, abs=1e-3), start_error_segment_middle
+    elif start == "end":
+        assert_array_almost_equal(spline(0.0), end_point, err_msg=start_error_segment_end)
     else:
         assert False, "Invalid start type"
     if start == "start" and end == "end":
@@ -343,4 +346,21 @@ def test_three_short_lines(plotter):
     start_corner_segment(data, l=1, s=4, start="middle", curve="cut_short")
     end_corner_segment(data, l=2, s=5, end="middle", curve="cut_short")
     straight_segment(data, l=2, s=6, start="middle", end="end")
+    plotter(data)
+
+
+def test_three_long_lines_with_z_move(plotter):
+    data = generate_curves([
+        "G1 X100 Y0",
+        "G1 X100 Y100",
+        "G1 Z10",
+        "G1 X0 Y100"
+    ], maximum_error=0.01)
+    assert data.xy_spline.control_points.shape[1] == 6
+    straight_segment(data, l=0, s=0, start="start", end="on")
+    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
+    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
+    straight_segment(data, l=1, s=3, start="on", end="end")
+    straight_segment(data, l=1, s=4, start="end", end="end")
+    straight_segment(data, l=3, s=5, start="start", end="end")
     plotter(data)
