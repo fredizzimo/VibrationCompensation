@@ -79,6 +79,7 @@ fabric.properties
 
 __pycache__
 environment*
+.venv
 
 .ipynb_checkpoints
 notebooks/exported
