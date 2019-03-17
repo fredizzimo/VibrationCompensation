@@ -184,18 +184,19 @@ def test_straight_line(plotter):
     straight_segment(data, l=0, s=0, start="start", end="end")
     plotter(data)
 
+
+def test_two_straight_lines(plotter):
+    data = generate_curves([
+        "G1 X50 Y50",
+        "G1 X100 Y100"
+    ], maximum_error=0.01)
+    assert data.smoothed_toolpath.segment_start.shape[0] == 2
+    straight_segment(data, l=0, s=0, start="start", end="end")
+    straight_segment(data, l=1, s=1, start="start", end="end")
+    plotter(data)
+
+
 if False:
-    def test_two_straight_lines(plotter):
-        data = generate_curves([
-            "G1 X50 Y50",
-            "G1 X100 Y100"
-        ], maximum_error=0.01)
-        assert data.xy_spline.control_points.shape[1] == 2
-        straight_segment(data, l=0, s=0, start="start", end="end")
-        straight_segment(data, l=1, s=1, start="start", end="end")
-        plotter(data)
-
-
     def test_90_corner(plotter):
         data = generate_curves([
             "G1 X100 Y0",
