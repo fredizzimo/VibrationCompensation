@@ -39,6 +39,9 @@ class Plotter(object):
             ts = np.linspace(start, end, 100000)
             int_ts = ts.astype(np.int)
             points = self.data.xy_spline(ts)
+            spline_segments_start = points[:-1]
+            spline_segments_end = points[1:]
+            spline_segments_f = self.data.f[int_ts[:-1]]
             def update_line_ds(data_source, filter):
                 data_source.data = {
                     "x0": self.data.start_xy[start:end, 0][filter],
@@ -48,17 +51,20 @@ class Plotter(object):
                     "f": self.data.f[start:end][filter],
                 }
             def update_spline_ds(data_source, filter):
+                w = np.where(filter)[0] + start
+                filter2 = np.isin(int_ts[:-1], w, assume_unique=False)
                 data_source.data = {
-                    "x0": points[:-1,0],
-                    "x1": points[1:,0],
-                    "y0": points[:-1,1],
-                    "y1": points[1:,1],
-                    "f": self.data.f[int_ts][:-1]
+                    "x0": spline_segments_start[filter2,0],
+                    "x1": spline_segments_end[filter2,0],
+                    "y0": spline_segments_start[filter2,1],
+                    "y1": spline_segments_end[filter2,1],
+                    "f": spline_segments_f[filter2]
                 }
             extrude_moves = self.data.e[start:end] > 0
             update_line_ds(move_line_ds, ~extrude_moves)
             update_line_ds(print_line_ds, extrude_moves)
-            update_spline_ds(print_spline_ds, ~extrude_moves)
+            update_spline_ds(print_spline_ds, extrude_moves)
+            update_spline_ds(move_spline_ds, ~extrude_moves)
 
         update_data_sources(0)
 
@@ -69,21 +75,26 @@ class Plotter(object):
                                     low=min_f,
                                     high=max_f)
 
-        p.segment(source=move_line_ds,
-                  x0="x0", y0="y0", x1="x1", y1="y1",
-                  line_width=2,
-                  line_color=color_mapper,
-                  line_dash="dotted")
         p.segment(source=print_line_ds,
-                  x0="x0", y0="y0", x1="x1", y1="y1",
-                  line_width=2,
-                  line_color=color_mapper,
-                  line_dash="dotted")
+            x0="x0", y0="y0", x1="x1", y1="y1",
+            line_width=2,
+            line_color=color_mapper,
+            line_dash="dotted")
+        p.segment(source=move_line_ds,
+            x0="x0", y0="y0", x1="x1", y1="y1",
+            line_width=2,
+            line_color=color_mapper,
+            line_dash="dotted")
         p.segment(source=print_spline_ds,
-               x0="x0", y0="y0", x1="x1", y1="y1",
-               line_width=2,
-               line_color=color_mapper,
-               line_dash="solid")
+            x0="x0", y0="y0", x1="x1", y1="y1",
+            line_width=2,
+            line_color=color_mapper,
+            line_dash="solid")
+        p.segment(source=move_spline_ds,
+            x0="x0", y0="y0", x1="x1", y1="y1",
+            line_width=2,
+            line_color=color_mapper,
+            line_dash="dashed")
         color_bar = plt.ColorBar(color_mapper=color_mapper["transform"], width=8, location=(0, 0))
         p.add_layout(color_bar, 'left')
         slider = plt.Slider(start=0, end=max(self.data.layer_index.keys()), value=0, step=1, title="Layer")
