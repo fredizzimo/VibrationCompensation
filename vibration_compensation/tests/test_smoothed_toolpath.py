@@ -46,16 +46,15 @@ def plotter(figures, request):
             line_color="red",
             line_dash="dotted"
         )
-        if data.xy_spline is not None:
-            points = data.xy_spline(np.linspace(0, data.start_xy.shape[0], 10000))
+        points = data.smoothed_toolpath(np.linspace(0, data.start_xy.shape[0], 10000))
 
-            p.line(
-                points[:,0],
-                points[:,1],
-                line_width=2,
-                line_color="blue",
-                line_dash="solid"
-            )
+        p.line(
+            points[:,0],
+            points[:,1],
+            line_width=2,
+            line_color="blue",
+            line_dash="solid"
+        )
 
         figures.append(p)
     return plot
