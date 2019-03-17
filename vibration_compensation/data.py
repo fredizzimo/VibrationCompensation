@@ -1,5 +1,6 @@
 import numpy as np
 from .phspline import PHSpline
+from .smoothed_toolpath import SmoothedToolpath
 
 class Data:
     def __init__(self, move_commands, layer_index):
@@ -12,3 +13,4 @@ class Data:
         self.layer = np.array(move_commands["layer"], dtype=np.int)
         self.layer_index = layer_index
         self.xy_spline : PHSpline = None
+        self.smoothed_toolpath = SmoothedToolpath(self.start_xy, self.end_xy)
