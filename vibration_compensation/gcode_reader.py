@@ -1,7 +1,7 @@
 from .data import Data
 from io import IOBase
 
-def read_gcode_lines(lines):
+def read_gcode_lines(lines, maximum_error):
     move_commands = {
         "start_x": [],
         "start_y": [],
@@ -55,10 +55,10 @@ def read_gcode_lines(lines):
     layer_index[current_layer] = (current_layer_index_start, len(move_commands["start_z"]))
 
 
-    return Data(move_commands, layer_index)
+    return Data(move_commands, layer_index, maximum_error)
 
-def read_gcode(gcode):
+def read_gcode(gcode, maximum_error):
     if  issubclass(type(gcode), IOBase):
-        return read_gcode_lines(gcode.readlines())
+        return read_gcode_lines(gcode.readlines(), maximum_error)
     else:
-        return read_gcode_lines(gcode)
+        return read_gcode_lines(gcode, maximum_error)
