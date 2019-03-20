@@ -38,7 +38,7 @@ class Plotter(object):
             start, end = self.data.layer_index[layer]
             ts = np.linspace(start, end, 100000)
             int_ts = ts.astype(np.int)
-            points = self.data.xy_spline(ts)
+            points = self.data.smoothed_toolpath(ts)
             spline_segments_start = points[:-1]
             spline_segments_end = points[1:]
             spline_segments_f = self.data.f[int_ts[:-1]]
