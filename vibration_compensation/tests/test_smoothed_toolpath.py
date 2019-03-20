@@ -213,17 +213,15 @@ def test_45_corner(plotter):
     straight_segment(data, l=1, s=2, start="on", end="end")
     plotter(data)
 
-"""
 def test_very_acute_corner(plotter):
     data = generate_curves([
         "G1 X100 Y0",
         "G1 X0 Y1"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
-    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
-    straight_segment(data, l=1, s=3, start="on", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
     plotter(data)
 
 
@@ -232,12 +230,11 @@ def test_135_corner(plotter):
         "G1 X100 Y0",
         "G1 X200 Y100"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="on")
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
-    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
-    straight_segment(data, l=1, s=3, start="on", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
     plotter(data)
 
 
@@ -246,11 +243,10 @@ def test_very_obtuse_corner(plotter):
         "G1 X100 Y0",
         "G1 X200 Y1"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
-    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
-    straight_segment(data, l=1, s=3, start="on", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
     plotter(data)
 
 
@@ -259,11 +255,10 @@ def test_obtuse_corner_with_short_lines(plotter):
         "G1 X10 Y0",
         "G1 X20 Y0.1"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="middle")
-    start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
-    end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")
-    straight_segment(data, l=1, s=3, start="middle", end="end")
+    corner_segment(data, l=0, s=1, start="middle", end="middle")
+    straight_segment(data, l=1, s=2, start="middle", end="end")
     plotter(data)
 
 
@@ -272,11 +267,10 @@ def test_obtuse_corner_with_shorter_and_longer_line(plotter):
         "G1 X10 Y0",
         "G1 X30 Y0.1"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="middle")
-    start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
-    end_corner_segment(data, l=1, s=2, end="on", curve="cut_short")
-    straight_segment(data, l=1, s=3, start="on", end="end")
+    corner_segment(data, l=0, s=1, start="middle", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
     plotter(data)
 
 
@@ -285,11 +279,10 @@ def test_obtuse_corner_with_longer_and_shorter_line(plotter):
         "G1 X20 Y0",
         "G1 X30 Y-0.1"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 4
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="cut_short")
-    end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")
-    straight_segment(data, l=1, s=3, start="middle", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="middle")
+    straight_segment(data, l=1, s=2, start="middle", end="end")
     plotter(data)
 
 
@@ -299,14 +292,12 @@ def test_three_long_lines(plotter):
         "G1 X100 Y100",
         "G1 X0 Y100"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 7
+    assert data.smoothed_toolpath.segment_start.shape[0] == 5
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
-    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
-    straight_segment(data, l=1, s=3, start="on", end="on")
-    start_corner_segment(data, l=1, s=4, start="on", curve="normal")
-    end_corner_segment(data, l=2, s=5, end="on", curve="normal")
-    straight_segment(data, l=2, s=6, start="on", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="on")
+    corner_segment(data, l=1, s=3, start="on", end="on")
+    straight_segment(data, l=2, s=4, start="on", end="end")
     plotter(data)
 
 
@@ -316,15 +307,13 @@ def test_three_short_lines(plotter):
         "G1 X20 Y0.1",
         "G1 X30 Y0.3"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 7
+    assert data.smoothed_toolpath.segment_start.shape[0] == 5
     straight_segment(data, l=0, s=0, start="start", end="middle")
-    start_corner_segment(data, l=0, s=1, start="middle", curve="cut_short")
-    end_corner_segment(data, l=1, s=2, end="middle", curve="cut_short")
+    corner_segment(data, l=0, s=1, start="middle", end="middle")
     # Note that this line is very short
-    straight_segment(data, l=1, s=3, start="middle", end="middle")
-    start_corner_segment(data, l=1, s=4, start="middle", curve="cut_short")
-    end_corner_segment(data, l=2, s=5, end="middle", curve="cut_short")
-    straight_segment(data, l=2, s=6, start="middle", end="end")
+    straight_segment(data, l=1, s=2, start="middle", end="middle")
+    corner_segment(data, l=1, s=3, start="middle", end="middle")
+    straight_segment(data, l=2, s=4, start="middle", end="end")
     plotter(data)
 
 
@@ -335,12 +324,10 @@ def test_three_long_lines_with_z_move(plotter):
         "G1 Z10",
         "G1 X0 Y100"
     ], maximum_error=0.01)
-    assert data.xy_spline.control_points.shape[1] == 6
+    assert data.smoothed_toolpath.segment_start.shape[0] == 5
     straight_segment(data, l=0, s=0, start="start", end="on")
-    start_corner_segment(data, l=0, s=1, start="on", curve="normal")
-    end_corner_segment(data, l=1, s=2, end="on", curve="normal")
-    straight_segment(data, l=1, s=3, start="on", end="end")
-    straight_segment(data, l=1, s=4, start="end", end="end")
-    straight_segment(data, l=3, s=5, start="start", end="end")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
+    straight_segment(data, l=1, s=3, start="end", end="end")
+    straight_segment(data, l=3, s=4, start="start", end="end")
     plotter(data)
-"""
