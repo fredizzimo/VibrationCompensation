@@ -118,39 +118,51 @@ class SmoothedToolpath(object):
         x = np.atleast_1d(x)
         index = np.searchsorted(self.segment_start, x, side="right")
         index = index - 1
-        # TODO: These don't need to be calculated for every segment
-        # Lines can use the line calcualtion and splines the spline one
-        # maybe move them to their own functions
-        t = (x - self.segment_start[index]) / (self.segment_end[index] - self.segment_start[index])
-        t_line = x - np.floor(self.segment_start[index])
-
-        lines = self.segment_number[index]
-        curves = self.curve_number[index]
-
-        line_filter = lines != -1
-        curve_filter = curves != -1
-
-        ret = np.empty((index.shape[0], 2))
-
-        dir = self.end_xy[lines[line_filter]] - self.start_xy[lines[line_filter]]
-        ret[line_filter] = self.start_xy[lines[line_filter]] + dir * t_line[line_filter,np.newaxis]
-
-        self._evaluate_bernstein(ret, t, curves, curve_filter)
+        ret = np.empty((x.shape[0], 2))
+        self._evaluate_lines(ret, x, index)
+        self._evaluate_bernstein(ret, x, index)
         if is_scalar:
             return ret[0]
         else:
             return ret
 
-    def _evaluate_bernstein(self, res, s, indices, filter):
-        if s.shape[0] == 0:
+    def _evaluate_lines(self, res, x, index):
+        lines = self.segment_number[index]
+        line_filter = lines != -1
+        filtered_indices = index[line_filter]
+        filtered_lines = lines[line_filter]
+        t_line = x[line_filter] - np.floor(self.segment_start[filtered_indices])
+        dir = self.end_xy[filtered_lines] - self.start_xy[filtered_lines]
+        res[line_filter] = self.start_xy[filtered_lines] + dir * t_line[:,np.newaxis]
+
+    def _evaluate_bernstein(self, res, x, index):
+        curves = self.curve_number[index]
+        curve_filter = curves != -1
+        filtered_curves = curves[curve_filter]
+        if filtered_curves.shape[0] == 0:
             return
-        curves = self.curves[:,:,indices[filter]]
-        s = s[filter]
-        res[filter] = 0.0
+        filtered_indices = index[curve_filter]
+        mid_point = np.floor(self.segment_end[filtered_indices])
+        on_next_segment = x[curve_filter] > mid_point
+        s = np.empty_like(x[curve_filter])
+        next_segment_index = filtered_indices[on_next_segment]
+        s[on_next_segment] = (
+            0.5 +
+            0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
+            (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
+
+        on_prev_segment = ~on_next_segment
+        prev_segment_index = filtered_indices[on_prev_segment]
+        s[on_prev_segment] = (
+            0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
+            (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
+
+        curves = self.curves[:,:,filtered_curves]
+        res[curve_filter] = 0.0
         comb = 1.0
         k = 11
         s1 = 1.0 - s
         for j in range(k+1):
-            res[filter] += (comb * s**j * s1**(k-j) * curves[j]).T
+            res[curve_filter] += (comb * s**j * s1**(k-j) * curves[j]).T
             comb *= 1. * (k-j) / (j+1.)
 
