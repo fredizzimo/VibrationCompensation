@@ -157,7 +157,7 @@ class SmoothedToolpath(object):
         index = np.searchsorted(self.segment_start, x, side="right")
         index = index - 1
         ret = np.empty((x.shape[0], 2))
-        self._evaluate_lines(ret, x, index)
+        self._evaluate_line(ret, x, index)
         self._evaluate_bernstein(ret, x, index)
         if is_scalar:
             return ret[0]
@@ -165,9 +165,22 @@ class SmoothedToolpath(object):
             return ret
 
     def distance(self, x):
-        return 0.0
+        is_scalar = np.isscalar(x)
+        x = np.atleast_1d(x)
+        index = np.searchsorted(self.segment_start, x, side="right")
+        index = index - 1
+        ret = np.empty(x.shape[0])
+        self._evaluate_line_distance(ret, x, index)
+        self._evaluate_bernstein_distance(ret, x, index)
 
-    def _evaluate_lines(self, res, x, index):
+        ret += self.segment_distances[index]
+        if is_scalar:
+            return ret[0]
+        else:
+            return ret
+
+
+    def _evaluate_line(self, res, x, index):
         lines = self.segment_number[index]
         line_filter = lines != -1
         filtered_indices = index[line_filter]
@@ -175,6 +188,14 @@ class SmoothedToolpath(object):
         t_line = x[line_filter] - np.floor(self.segment_start[filtered_indices])
         dir = self.end_xy[filtered_lines] - self.start_xy[filtered_lines]
         res[line_filter] = self.start_xy[filtered_lines] + dir * t_line[:,np.newaxis]
+
+    def _evaluate_line_distance(self, res, x, index):
+        lines = self.segment_number[index]
+        line_filter = lines != -1
+        filtered_indices = index[line_filter]
+        t_line = ((x[line_filter] - self.segment_start[filtered_indices]) /
+            (self.segment_end[filtered_indices] - self.segment_start[filtered_indices]))
+        res[line_filter] = self.segment_lengths[filtered_indices] * t_line
 
     def _evaluate_bernstein(self, res, x, index):
         curves = self.curve_number[index]
@@ -185,25 +206,60 @@ class SmoothedToolpath(object):
         filtered_indices = index[curve_filter]
         mid_point = np.floor(self.segment_end[filtered_indices])
         on_next_segment = x[curve_filter] > mid_point
-        s = np.empty_like(x[curve_filter])
+        t = np.empty_like(x[curve_filter])
         next_segment_index = filtered_indices[on_next_segment]
-        s[on_next_segment] = (
+        t[on_next_segment] = (
             0.5 +
             0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
             (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
 
         on_prev_segment = ~on_next_segment
         prev_segment_index = filtered_indices[on_prev_segment]
-        s[on_prev_segment] = (
+        t[on_prev_segment] = (
             0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
             (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
 
         curves = self.curves[:,:,filtered_curves]
         res[curve_filter] = 0.0
         comb = 1.0
-        k = 11
-        s1 = 1.0 - s
-        for j in range(k+1):
-            res[curve_filter] += (comb * s**j * s1**(k-j) * curves[j]).T
-            comb *= 1. * (k-j) / (j+1.)
+        n = 11
+        t1 = 1.0 - t
+        for k in range(n+1):
+            res[curve_filter] += (comb * t ** k * t1 ** (n - k) * curves[k]).T
+            comb *= 1. * (n-k) / (k+1.)
+
+    def _evaluate_bernstein_distance(self, res, x, index):
+        curves = self.curve_number[index]
+        curve_filter = curves != -1
+        filtered_curves = curves[curve_filter]
+        if filtered_curves.shape[0] == 0:
+            return
+        filtered_indices = index[curve_filter]
+        mid_point = np.floor(self.segment_end[filtered_indices])
+        on_next_segment = x[curve_filter] > mid_point
+        t = np.empty_like(x[curve_filter])
+        next_segment_index = filtered_indices[on_next_segment]
+        t[on_next_segment] = (
+            0.5 +
+            0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
+            (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
+
+        on_prev_segment = ~on_next_segment
+        prev_segment_index = filtered_indices[on_prev_segment]
+        t[on_prev_segment] = (
+            0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
+            (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
+
+        curves = self.curves[:,:,filtered_curves]
+        res[curve_filter] = 0.0
+        comb = 1.0
+        n = 11
+        t1 = 1.0 - t
+        s = 0
+        for k in range(n+1):
+            res[curve_filter] += (s / n) * comb * t**k * t1**(n-k)
+            comb *= 1. * (n-k) / (k+1.)
+            if k < n:
+                s += self.speed_coeffs[k,filtered_curves]
+
 

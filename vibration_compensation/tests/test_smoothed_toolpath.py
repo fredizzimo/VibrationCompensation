@@ -90,12 +90,26 @@ class SegmentChecker(object):
             self.spline_mid = (self.spline_start + self.spline_end) / 2.0
         xy_lengths = np.linalg.norm(data.end_xy - data.start_xy, axis=1)
         self.start_line_dist = np.sum(xy_lengths[:l])
-        self.end_line_dist = self.start_line_dist + xy_lengths[l]
+        self.line_length = xy_lengths[l]
+        if l < data.start_xy.shape[0] - 1:
+            self.start_next_line_dist = self.start_line_dist + self.line_length
+            self.next_line_length = xy_lengths[l+1]
+
+    def check_distance(self, spline, line):
+        msg = "The spline start distance does not match"
+        if line <= 1.0:
+            line_dist = self.start_line_dist + self.line_length * line
+        else:
+            line_dist = self.start_next_line_dist + self.next_line_length * (line-1.0)
+        assert self.spline.distance(spline) <= line_dist and \
+            self.spline.distance(spline) == pytest.approx(line_dist, abs=0.1), \
+            msg
 
     def check_start_point_start(self):
         msg = "The start point of the spline segment does not match the line start point"
         assert_array_almost_equal(self.spline(self.spline_start), self.start_point,
                                   err_msg=msg)
+        self.check_distance(self.spline_start, 0)
 
     def check_start_point_on(self):
         msg = "The start point of the spline segment is not on the line"
@@ -106,15 +120,18 @@ class SegmentChecker(object):
         msg = "The start point of the spline segment is not on the middle of the line"
         assert point_on_middle_of_line(self.start_point, self.end_point,
             self.spline(self.spline_start)) == pytest.approx(0, abs=1e-3), msg
+        self.check_distance(self.spline_start, 0.5)
 
     def check_line_start_point_end(self):
         msg = "The start point of the spline segment is not on the end of the line"
         assert_array_almost_equal(self.spline(self.spline_start), self.end_point, err_msg=msg)
+        self.check_distance(self.spline_start, 1.0)
 
     def check_point_on_middle_of_line(self):
         msg = "The middle point of the spline segment is not on the middle of the line"
         assert point_on_middle_of_line(self.start_point, self.end_point,
             self.spline(self.spline_mid)) == pytest.approx(0, abs=1e-12), msg
+        self.check_distance(self.spline_mid, 0.5)
 
     def check_point_on_line(self):
         msg = "The middle point of the spline segment is not on the line"
@@ -124,10 +141,10 @@ class SegmentChecker(object):
     def check_end_point_end(self):
         msg = "The end point of the spline segment does not match the line end point"
         assert_array_almost_equal(self.spline(self.spline_end), self.end_point), msg
+        self.check_distance(self.spline_end, 1.0)
 
     end_error_segment = "The end point of the spline segment is not on the line"
     def check_end_point_on(self):
-        msg = SegmentChecker.end_error_segment
         assert point_on_line(self.start_point, self.end_point, self.spline(self.spline_end)) == \
             pytest.approx(0, abs=1e-12), SegmentChecker.end_error_segment
 
@@ -141,11 +158,13 @@ class SegmentChecker(object):
         assert point_on_middle_of_line(self.start_point, self.end_point,
             self.spline(self.spline_end)) == pytest.approx(0, abs=1e-3),\
             SegmentChecker.end_error_segment_middle
+        self.check_distance(self.spline_end, 0.5)
 
     def check_corner_end_point_middle(self):
         assert point_on_middle_of_line(self.next_start_point, self.next_end_point,
             self.spline(self.spline_end)) == pytest.approx(0, abs=1e-3),\
             SegmentChecker.end_error_segment_middle
+        self.check_distance(self.spline_end, 1.5)
 
     def check_continuity(self):
         msg = "There's a discontinuity at the end of the spline segment"
@@ -156,6 +175,12 @@ class SegmentChecker(object):
             assert_array_almost_equal(self.spline(self.spline_start-1e-12), self.spline(self.spline_start),
                                       err_msg=msg)
 
+            assert self.spline.distance(self.spline_start-1e-12) <=\
+                self.spline.distance(self.spline_start) and \
+                self.spline.distance(self.spline_start-1e-12) == \
+                pytest.approx(self.spline.distance(self.spline_start), abs=0.001), \
+                "The previous segment end distance and the current segment start do not match up"
+
     def check_corner_spline_order(self):
         assert self.spline_end > self.spline_mid, \
             "The endpoint of the corner spline is before the line segment end"
@@ -164,11 +189,13 @@ class SegmentChecker(object):
     def check_corner_middle_normal(self):
         assert np.linalg.norm(self.end_point - self.spline(self.spline_mid)) <= 0.01,\
             SegmentChecker.corner_error
+        self.check_distance(self.spline_mid, 1.0)
 
     def check_corner_middle_short(self):
         assert np.linalg.norm(self.end_point - self.spline(self.spline_mid)) ==\
             pytest.approx(0.01, abs=1e-12), \
             SegmentChecker.corner_error
+        self.check_distance(self.spline_mid, 1.0)
 
 
 def straight_segment(data, l, s, start, end):
