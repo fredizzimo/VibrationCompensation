@@ -72,12 +72,38 @@ class SmoothedToolpath(object):
         self.curves[10] = P1 + (2.0 * l + l_prime) * T1
         self.curves[11] = P1 + (3.0 * l + l_prime) * T1
 
+        self.speed_coeffs = np.empty((11, l.shape[0]))
+
         end_segment_mapper = np.empty(self.start_xy.shape[0], dtype=valid_segments.dtype)
         end_segment_mapper[:-1] = valid_segments
         end_segment_mapper[-1] = False
         start_segment_mapper = np.empty(self.start_xy.shape[0], dtype=valid_segments.dtype)
         start_segment_mapper[1:] = valid_segments
         start_segment_mapper[0] = False
+
+        if l.shape[0]:
+            def eq_u0u3_u0v3():
+                B3B4 = self.curves[4] - self.curves[3]
+                lB3B4sq = np.einsum('ji,ji -> i', B3B4, B3B4)
+                lsq = l*l
+                a = 18.0 * 11.0 * lB3B4sq
+                b = 13.0 * 11.0 * lsq
+                c = 5*l
+                return (a - b) / c
+
+            u0u3_u0v3 = eq_u0u3_u0v3()
+
+            self.speed_coeffs[0] = 11.0 * l
+            self.speed_coeffs[1] = self.speed_coeffs[0]
+            self.speed_coeffs[2] = self.speed_coeffs[0]
+            self.speed_coeffs[3] = (1.0 / 6.0) * u0u3_u0v3 + (55.0 / 6.0)*l
+            self.speed_coeffs[4] = (11.0 / 21.0) * u0u3_u0v3 + (110.0 / 21.0)*l
+            self.speed_coeffs[5] = u0u3_u0v3
+            self.speed_coeffs[6] = self.speed_coeffs[4]
+            self.speed_coeffs[7] = self.speed_coeffs[3]
+            self.speed_coeffs[8] = self.speed_coeffs[0]
+            self.speed_coeffs[9] = self.speed_coeffs[0]
+            self.speed_coeffs[10] = self.speed_coeffs[0]
 
         middle_start = np.array(start_xy.T, copy=True)
         middle_end = np.array(end_xy.T, copy=True)
@@ -113,6 +139,18 @@ class SmoothedToolpath(object):
         self.segment_end[:-1] = self.segment_start[1:]
         self.segment_end[-1] = num_lines
 
+        self.segment_lengths = np.empty(self.segment_start.shape[0])
+        line_segments = self.segment_number != -1
+        line_segment_numbers = self.segment_number[line_segments]
+        lines = self.end_xy[line_segment_numbers] - self.start_xy[line_segment_numbers]
+        scale_factor = self.segment_end[line_segments] - self.segment_start[line_segments]
+        scaled_lines = lines * scale_factor[:,np.newaxis]
+        self.segment_lengths[line_segments] = np.linalg.norm(scaled_lines, axis=1)
+        self.segment_lengths[~line_segments] = np.sum(self.speed_coeffs, axis=0) / 11.0
+        self.segment_distances = np.empty(self.segment_lengths.shape[0] + 1)
+        self.segment_distances[1:] = np.cumsum(self.segment_lengths)
+        self.segment_distances[0] = 0.0
+
     def __call__(self, x):
         is_scalar = np.isscalar(x)
         x = np.atleast_1d(x)
@@ -125,6 +163,9 @@ class SmoothedToolpath(object):
             return ret[0]
         else:
             return ret
+
+    def distance(self, x):
+        return 0.0
 
     def _evaluate_lines(self, res, x, index):
         lines = self.segment_number[index]
