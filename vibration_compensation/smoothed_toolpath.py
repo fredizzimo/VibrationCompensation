@@ -105,6 +105,22 @@ class SmoothedToolpath(object):
             self.speed_coeffs[9] = self.speed_coeffs[0]
             self.speed_coeffs[10] = self.speed_coeffs[0]
 
+            self.distance_coeffs = np.empty((12, self.speed_coeffs.shape[1]))
+
+            comb = np.empty(12)
+
+            self.distance_coeffs[0] = np.full(self.distance_coeffs.shape[1], 0.0)
+            comb[0] = 1.0
+            for i in range(11):
+                self.distance_coeffs[i + 1] = self.speed_coeffs[i] + self.distance_coeffs[i]
+                comb[i+1] = comb[i] * (1.0 * (11-i) / (i+1.0))
+
+            self.distance_coeffs *= (comb / 11.0)[:,np.newaxis]
+            self.coeffs = self.curves * comb[:,np.newaxis,np.newaxis]
+        else:
+            self.coeffs = None
+            self.distance_coeffs = None
+
         middle_start = np.array(start_xy.T, copy=True)
         middle_end = np.array(end_xy.T, copy=True)
 
@@ -152,33 +168,29 @@ class SmoothedToolpath(object):
         self.segment_distances[0] = 0.0
 
     def __call__(self, x):
-        is_scalar = np.isscalar(x)
-        x = np.atleast_1d(x)
-        index = np.searchsorted(self.segment_start, x, side="right")
-        index = index - 1
-        ret = np.empty((x.shape[0], 2))
-        self._evaluate_line(ret, x, index)
-        self._evaluate_bernstein(ret, x, index)
-        if is_scalar:
-            return ret[0]
-        else:
-            return ret
+        return self._evaluate(x, False)
 
     def distance(self, x):
+        return self._evaluate(x, True)
+
+    def _evaluate(self, x, is_distance=False):
         is_scalar = np.isscalar(x)
         x = np.atleast_1d(x)
         index = np.searchsorted(self.segment_start, x, side="right")
         index = index - 1
-        ret = np.empty(x.shape[0])
-        self._evaluate_line_distance(ret, x, index)
-        self._evaluate_bernstein_distance(ret, x, index)
-
-        ret += self.segment_distances[index]
+        if is_distance:
+            ret = np.empty((x.shape[0]))
+            self._evaluate_line_distance(ret, x, index)
+            self._evaluate_bernstein_distance(ret, x, index)
+            ret += self.segment_distances[index]
+        else:
+            ret = np.empty((x.shape[0], 2))
+            self._evaluate_line(ret, x, index)
+            self._evaluate_bernstein(ret, x, index)
         if is_scalar:
             return ret[0]
         else:
             return ret
-
 
     def _evaluate_line(self, res, x, index):
         lines = self.segment_number[index]
@@ -198,37 +210,14 @@ class SmoothedToolpath(object):
         res[line_filter] = self.segment_lengths[filtered_indices] * t_line
 
     def _evaluate_bernstein(self, res, x, index):
-        curves = self.curve_number[index]
-        curve_filter = curves != -1
-        filtered_curves = curves[curve_filter]
-        if filtered_curves.shape[0] == 0:
-            return
-        filtered_indices = index[curve_filter]
-        mid_point = np.floor(self.segment_end[filtered_indices])
-        on_next_segment = x[curve_filter] > mid_point
-        t = np.empty_like(x[curve_filter])
-        next_segment_index = filtered_indices[on_next_segment]
-        t[on_next_segment] = (
-            0.5 +
-            0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
-            (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
-
-        on_prev_segment = ~on_next_segment
-        prev_segment_index = filtered_indices[on_prev_segment]
-        t[on_prev_segment] = (
-            0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
-            (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
-
-        curves = self.curves[:,:,filtered_curves]
-        res[curve_filter] = 0.0
-        comb = 1.0
-        n = 11
-        t1 = 1.0 - t
-        for k in range(n+1):
-            res[curve_filter] += (comb * t ** k * t1 ** (n - k) * curves[k]).T
-            comb *= 1. * (n-k) / (k+1.)
+        if self.coeffs is not None:
+            self._evaluate_bernstein_common(res, x, index, self.coeffs)
 
     def _evaluate_bernstein_distance(self, res, x, index):
+        if self.distance_coeffs is not None:
+            self._evaluate_bernstein_common(res, x, index, self.distance_coeffs)
+
+    def _evaluate_bernstein_common(self, res, x, index, coeffs):
         curves = self.curve_number[index]
         curve_filter = curves != -1
         filtered_curves = curves[curve_filter]
@@ -240,26 +229,21 @@ class SmoothedToolpath(object):
         t = np.empty_like(x[curve_filter])
         next_segment_index = filtered_indices[on_next_segment]
         t[on_next_segment] = (
-            0.5 +
-            0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
-            (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
+                0.5 +
+                0.5 * (x[curve_filter][on_next_segment] - mid_point[on_next_segment]) /
+                (self.segment_end[next_segment_index] - mid_point[on_next_segment]))
 
         on_prev_segment = ~on_next_segment
         prev_segment_index = filtered_indices[on_prev_segment]
         t[on_prev_segment] = (
-            0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
-            (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
+                0.5* (x[curve_filter][on_prev_segment] - self.segment_start[prev_segment_index]) /
+                (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
 
-        curves = self.curves[:,:,filtered_curves]
         res[curve_filter] = 0.0
-        comb = 1.0
         n = 11
         t1 = 1.0 - t
-        s = 0
         for k in range(n+1):
-            res[curve_filter] += (s / n) * comb * t**k * t1**(n-k)
-            comb *= 1. * (n-k) / (k+1.)
-            if k < n:
-                s += self.speed_coeffs[k,filtered_curves]
-
-
+            a = t ** k * t1 ** (n - k)
+            if len(coeffs.shape) > 2:
+                a = a[...,np.newaxis]
+            res[curve_filter] += coeffs[k,...,filtered_curves] * a
