@@ -1,4 +1,5 @@
 import numpy as np
+from .chandrupatla import chandrupatla
 
 
 class SmoothedToolpath(object):
@@ -172,6 +173,18 @@ class SmoothedToolpath(object):
 
     def distance(self, x):
         return self._evaluate(x, True)
+
+    def total_distance(self):
+        return self.segment_distances[-1]
+
+    def fixed_distances(self, start, end, num_steps):
+        targets = np.linspace(start, end, num_steps)
+        def f(t):
+            return self.distance(t) - targets
+        x0 = np.full(num_steps, 0.0)
+        x1 = np.full(num_steps, self.start_xy.shape[0], dtype=np.float)
+        t = chandrupatla(f, x0, x1)
+        return t
 
     def _evaluate(self, x, is_distance=False):
         is_scalar = np.isscalar(x)

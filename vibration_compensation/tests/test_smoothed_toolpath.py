@@ -250,6 +250,12 @@ def corner_segment(data, l, s, start, end):
     checker.check_continuity()
 
 
+def check_distances(data):
+    t = data.smoothed_toolpath.fixed_distances(0, data.smoothed_toolpath.total_distance(), 10)
+    assert_array_almost_equal(data.smoothed_toolpath.distance(t),
+                              np.linspace(0, data.smoothed_toolpath.total_distance(), 10))
+
+
 def test_straight_line(plotter):
     data = generate_curves([
         "G1 X100 Y200"
@@ -258,6 +264,7 @@ def test_straight_line(plotter):
     straight_segment(data, l=0, s=0, start="start", end="end")
     assert np.sum(data.smoothed_toolpath.segment_lengths) ==\
            pytest.approx(np.linalg.norm([100, 200]))
+    check_distances(data)
     plotter(data)
 
 
@@ -273,6 +280,7 @@ def test_two_straight_lines(plotter):
            pytest.approx(
                np.linalg.norm([50, 50]) + np.linalg.norm([50, 50])
            )
+    check_distances(data)
     plotter(data)
 
 
@@ -287,6 +295,7 @@ def test_90_corner(plotter):
     straight_segment(data, l=1, s=2, start="on", end="end")
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 200.0
     assert np.sum(data.smoothed_toolpath.segment_lengths) == pytest.approx(200, abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -302,6 +311,7 @@ def test_45_corner(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 100 + np.linalg.norm([100, 100])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(100 + np.linalg.norm([100, 100]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 def test_very_acute_corner(plotter):
@@ -316,6 +326,7 @@ def test_very_acute_corner(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 100 + np.linalg.norm([100, 1])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(100 + np.linalg.norm([100, 1]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -332,6 +343,7 @@ def test_135_corner(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 100 + np.linalg.norm([100, 100])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(100 + np.linalg.norm([100, 100]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -347,6 +359,7 @@ def test_very_obtuse_corner(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 100 + np.linalg.norm([100, 1])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(100 + np.linalg.norm([100, 1]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -362,6 +375,7 @@ def test_obtuse_corner_with_short_lines(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 10 + np.linalg.norm([10, 0.1])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(10 + np.linalg.norm([10, 0.1]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -377,6 +391,7 @@ def test_obtuse_corner_with_shorter_and_longer_line(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 10 + np.linalg.norm([20, 0.1])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(10 + np.linalg.norm([20, 0.1]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -392,6 +407,7 @@ def test_obtuse_corner_with_longer_and_shorter_line(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 20 + np.linalg.norm([10, 0.1])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(20 + np.linalg.norm([10, 0.1]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -410,6 +426,7 @@ def test_three_long_lines(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 300
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(300, abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -430,6 +447,7 @@ def test_three_short_lines(plotter):
            10 + np.linalg.norm([10, 0.1]) + np.linalg.norm([10, 0.2])
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(10 + np.linalg.norm([10, 0.1]) + np.linalg.norm([10, 0.2]), abs=0.1)
+    check_distances(data)
     plotter(data)
 
 
@@ -449,4 +467,5 @@ def test_three_long_lines_with_z_move(plotter):
     assert np.sum(data.smoothed_toolpath.segment_lengths) < 300
     assert np.sum(data.smoothed_toolpath.segment_lengths) == \
            pytest.approx(300, abs=0.1)
+    check_distances(data)
     plotter(data)
