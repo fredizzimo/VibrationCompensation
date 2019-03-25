@@ -1,5 +1,7 @@
 import numpy as np
+from scipy.optimize import brentq, least_squares
 from .chandrupatla import chandrupatla
+import math
 
 
 class SmoothedToolpath(object):
@@ -167,6 +169,7 @@ class SmoothedToolpath(object):
         self.segment_distances = np.empty(self.segment_lengths.shape[0] + 1)
         self.segment_distances[1:] = np.cumsum(self.segment_lengths)
         self.segment_distances[0] = 0.0
+        self._calculate_uv_coeffs()
 
     def __call__(self, x):
         return self._evaluate(x, False)
@@ -185,6 +188,33 @@ class SmoothedToolpath(object):
         x1 = np.full(num_steps, self.start_xy.shape[0], dtype=np.float)
         t = chandrupatla(f, x0, x1)
         return t
+
+    #The curve factor is reference curvature * reference speed * reference delta time
+    def fixed_curvature_speeds(self, start, end, curve_factor):
+        current = start
+        ts = [start, current]
+        while current < end:
+            index = np.searchsorted(self.segment_start, current, side="right")
+            index = index - 1
+            index = np.atleast_1d(index)
+            if self.segment_number[index] != -1:
+                current = self.segment_end[index]
+            else:
+                prev = np.empty((1, 2))
+                current_t = np.atleast_1d(current)
+                self._evaluate_bernstein_common(prev, current_t, index, self.uv_coeffs)
+                def f(t):
+                    c = math.tan(0.5*curve_factor)
+                    p = np.empty((1,2))
+                    t = np.atleast_1d(t)
+                    self._evaluate_bernstein_common(p, t, index, self.uv_coeffs)
+                    return (c*prev[0,0] + prev[0,1])*p[0,0] - (prev[0,0] - c*prev[0,1])*p[0,1]
+                try:
+                    current = brentq(f, current, self.segment_end[index])
+                except:
+                    current = self.segment_end[index]
+            ts.append(current)
+        return np.array(ts, dtype=np.float)
 
     def _evaluate(self, x, is_distance=False):
         is_scalar = np.isscalar(x)
@@ -253,10 +283,61 @@ class SmoothedToolpath(object):
                 (mid_point[on_prev_segment] - self.segment_start[prev_segment_index]))
 
         res[curve_filter] = 0.0
-        n = 11
+        n = coeffs.shape[0] - 1
         t1 = 1.0 - t
         for k in range(n+1):
             a = t ** k * t1 ** (n - k)
             if len(coeffs.shape) > 2:
                 a = a[...,np.newaxis]
             res[curve_filter] += coeffs[k,...,filtered_curves] * a
+
+
+    def _calculate_uv_coeffs(self):
+        def f_uv(args, expectation):
+            u0, v0, u3, v3 = args
+            res = np.fromiter((
+                u0 ** 2 - v0 ** 2,
+                2.0 * u0 * v0,
+                #u0 ** 2 - v0 ** 2,
+                #2.0 * u0 * v0,
+                #u0 ** 2 - v0 ** 2,
+                #10.0 * u0 * v0 / 9.0,
+                #5.0 * u0 ** 2 / 6.0 + u0 * u3 / 6.0 - 5.0 * v0 ** 2 / 6.0 - v0 * v3 / 6.0,
+                #5.0 * u0 * v0 / 3.0 + u0 * v3 / 6.0 + u3 * v0 / 6.0,
+                #10.0 * u0 ** 2.0 / 21.0 + 11.0 * u0 * u3 / 21.0 - 10.0 * v0 ** 2 / 21.0 - 11.0 * v0 * v3 / 21.0,
+                #20.0 * u0 * v0 / 21.0 + 11.0 * u0 * v3 / 21.0 + 11.0 * u3 * v0 / 21.0,
+                #u0 * u3 - v0 * v3,
+                #u0 * v3 + u3 * v0,
+                #11.0 * u0 * u3 / 21.0 + 10.0 * u3 ** 2 / 21.0 - 3.0 * v0 * v3 / 7.0 - 10.0 * v3 ** 2 / 21.0,
+                #11.0 * u0 * v3 / 21.0 + 11.0 * u3 * v0 / 21.0 + 20.0 * u3 * v3 / 21.0,
+                #u0 * u3 / 6.0 + 5.0 * u3 ** 2 / 6.0 - 5.0 * v3 ** 2.0 / 6.0,
+                #u0 * v3 / 6.0 + u3 * v0 / 6.0 + 5.0 * u3 * v3 / 3.0,
+                #u3 ** 2 - v3 ** 2.0,
+                #2.0 * u3 * v3,
+                #u3 ** 2.0 - v3 ** 2.0,
+                #2.0 * u3 * v3,
+                u3 ** 2 - v3 ** 2,
+                2.0 * u3 * v3
+            ), count=4, dtype=np.float)
+            return res - expectation
+
+        self.uv = np.empty((6, 2, self.curves.shape[2]))
+
+        expectations = 11.0 * (self.curves[1:] - self.curves[0:-1])
+        expectations = expectations.reshape(22, expectations.shape[2])
+        expectations = expectations[[0,1,20,21]]
+        for i in range(expectations.shape[1]):
+            guess = np.array(expectations[:,i], copy=True)
+            res = least_squares(f_uv, guess, args=(expectations[:,i],), method="trf")
+            self.uv[0,:,i] = res.x[0:2]
+            self.uv[3,:,i] = res.x[2:4]
+        self.uv[1,:,:] = self.uv[0,:,:]
+        self.uv[2,:,:] = self.uv[0,:,:]
+        self.uv[4,:,:] = self.uv[3,:,:]
+        self.uv[5,:,:] = self.uv[3,:,:]
+        comb = np.empty(6)
+        comb[0] = 1.0
+        for i in range(5):
+            comb[i+1] = comb[i] * (1.0 * (5-i) / (i+1.0))
+        self.uv_coeffs = self.uv
+        self.uv_coeffs *= (comb / 5.0)[:,np.newaxis,np.newaxis]

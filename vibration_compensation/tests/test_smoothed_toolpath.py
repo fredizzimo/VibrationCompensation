@@ -44,7 +44,8 @@ def plotter(figures, request):
             line_color="red",
             line_dash="dotted"
         )
-        points = data.smoothed_toolpath(np.linspace(0, data.start_xy.shape[0], 100000))
+        ts = data.smoothed_toolpath.fixed_curvature_speeds(0, data.smoothed_toolpath.start_xy.shape[0], 0.01)
+        points = data.smoothed_toolpath(ts)
 
         p.line(
             points[:,0],
@@ -52,6 +53,12 @@ def plotter(figures, request):
             line_width=2,
             line_color="blue",
             line_dash="solid"
+        )
+        p.circle(
+            points[:,0],
+            points[:,1],
+            size=4,
+            fill_color="white"
         )
 
         figures.append(p)
