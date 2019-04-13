@@ -1,14 +1,12 @@
 import colorcet
 from . import bokeh_imports as plt
 from .data import Data
-from .phspline import PHSpline
 import numpy as np
 
 
 class Plotter(object):
-    def __init__(self, data: Data, port):
+    def __init__(self, data: Data):
         self.data = data
-        self.port = port
 
     def plot(self, doc):
         min_axis = np.min(self.data.start_xy)
@@ -104,7 +102,3 @@ class Plotter(object):
         layout = plt.layout([p, slider])
         doc.add_root(layout)
 
-    def run_webserver(self):
-        server = plt.Server({'/': plt.Application(plt.FunctionHandler(self.plot))}, port=self.port)
-        server.start()
-        server.io_loop.start()

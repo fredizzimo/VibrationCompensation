@@ -1,5 +1,5 @@
 import argparse
-from vibration_compensation import read_gcode, Plotter
+from vibration_compensation import read_gcode, Application
 
 
 def main():
@@ -7,8 +7,10 @@ def main():
     parser.add_argument("input", type=argparse.FileType("r"))
     args = parser.parse_args()
     data = read_gcode(args.input, 0.01)
-    plotter = Plotter(data=data, port=4368)
-    plotter.run_webserver()
+
+    app = Application(data=data, port=4368)
+    app.run()
+
 
 if __name__ == "__main__":
     main()
