@@ -293,3 +293,76 @@ def generate_corner_splitting_matrices():
     return  substitute(splitting_matrix_first_half), substitute(splitting_matrix_second_half)
 
 display(generate_corner_splitting_matrices())
+
+#%% [markdown]
+# # w paramater of a 11th degree PH spline
+
+#%%
+def calculate_w():
+    # References 
+    # [1] Hu, Qin, et al. "A Real-Time C3 Continuous Local Corner Smoothing and Interpolation Algorithm for CNC Machine Tools." Journal of Manufacturing Science and Engineering (2019): 1-37.
+    # [2] Farouki, Rida T., Carlotta Giannelli, and Alessandra Sestini. "Identification and “reverse engineering” of Pythagorean-hodograph curves." Computer Aided Geometric Design 34 (2015): 21-36.
+    s_w = sp.IndexedBase("w", complex=True)
+    s_d = sp.IndexedBase("d", complex=True)
+    w_fun = sp.Function("w")(s_t)
+    d_fun = sp.Function("d")(s_t)
+    s_b = sp.IndexedBase("b")
+    def bernstein(variable, degree):
+        return sp.Sum(
+            variable[s_k]*sp.binomial(degree, s_k) * 
+            (1-s_t)**(degree-s_k) * 
+            s_t**s_k, (s_k, 0, degree))
+    
+    display("[2] Gives the following formula for reverse engineering a PH spline")
+    eq_w = sp.Eq(w_fun, bernstein(s_w, (s_K-1) / 2))
+    display(eq_w)
+    eq_d = sp.Eq(d_fun, bernstein(s_d, s_K-1))
+    display(eq_d)
+
+    eq_w_d = sp.Eq(eq_w.rhs**2, eq_d.rhs)
+    display(eq_w_d)
+
+    display("We are dealing with a 11th degree spline")
+    degree = 11
+    eq_11_degree = eq_w_d.subs(s_K, degree)
+    display(eq_11_degree)
+    res = sp.solve(eq_11_degree.doit(), [s_d[i] for i in range(degree)], dict=True)
+    eq_solved_d = [sp.Eq(k, v) for k, v in res[0].items()]
+    for e in eq_solved_d:
+        display(e)
+
+    display("From [1] eq a7 we have")
+    eq_a7_w = [
+        sp.Eq(s_w[0], sp.Eq(s_w[1], s_w[2]), evaluate=False),
+        sp.Eq(s_w[3], sp.Eq(s_w[4], s_w[5]), evaluate=False)
+    ]
+    display(eq_a7_w)
+
+    display("Substituting with the above gives")
+
+    for i,_ in enumerate(eq_solved_d):
+        for a in eq_a7_w:
+            eq_solved_d[i] = eq_solved_d[i].subs(a.rhs.lhs, a.lhs).subs(a.rhs.rhs, a.lhs)
+    
+    for e in eq_solved_d:
+        display(e)
+
+    display("We can use d0 and d5 to solve w0 and w3")
+    # Note that we are ignoring the signs like [2] does
+    w_0 = sp.Eq(s_w[0], sp.solve(eq_solved_d[0], s_w[0])[1])
+    w_3 = sp.Eq(s_w[3], sp.solve(eq_solved_d[5].subs(w_0.lhs, w_0.rhs), s_w[3])[0])
+    display(w_0)
+    display(w_3)
+
+    display("And from [2] we have")
+    s_x = sp.IndexedBase("x")
+    s_y = sp.IndexedBase("y")
+    eq_d_p = sp.Eq(s_d[s_k], s_K*(s_p[s_k+1]-s_p[s_k]))
+    eq_p_k = sp.Eq(s_p[s_k], s_x[s_k] + sp.I*s_y[s_k])
+    eq_p_k1 = eq_p_k.subs(s_k, s_k+1)
+    display(eq_d_p)
+    display(eq_p_k)
+    eq_d_p = eq_d_p.subs(eq_p_k.lhs, eq_p_k.rhs).subs(eq_p_k1.lhs, eq_p_k1.rhs)
+    display(eq_d_p)
+
+calculate_w()
