@@ -55,13 +55,42 @@ class Trapezoidal(object):
         else:
             return self.end_v
 
+    def a(self, t):
+        if t <= self.t_a:
+            return self.max_a
+        elif t <= self.t - self.t_d:
+            return 0
+        elif t <= self.t:
+            return -self.max_a
+        else:
+            return 0
+
+    def s(self, t):
+        if t <= self.t_a:
+            return (
+               self.start_v * t +
+               (self.cruise_v - self.start_v) / (2.0*self.t_a) * t**2
+            )
+        elif t <= self.t - self.t_d:
+            return self.start_v*self.t_a / 2.0 + self.cruise_v * (t - self.t_a / 2.0)
+        elif t <= self.t:
+            return (
+                self.distance -
+                self.end_v * (self.t - t) -
+                (self.cruise_v - self.end_v) / (2.0*self.t_d) * (self.t - t)**2.0
+            )
+        else:
+            return self.distance
+
+
+
 
 
 class Instance(object):
     def __init__(self, doc):
         self.start_speed = FloatInput(value=0.0, title="Start Speed", on_update=self.on_update)
-        self.end_speed = FloatInput(value=100.0, title="End Speed", on_update=self.on_update)
-        self.distance = FloatInput(value=10.0, title="Distance", on_update=self.on_update)
+        self.end_speed = FloatInput(value=10.0, title="End Speed", on_update=self.on_update)
+        self.distance = FloatInput(value=20.0, title="Distance", on_update=self.on_update)
         self.max_a = FloatInput(value=1000.0, title="Max acceleration", on_update=self.on_update)
         self.max_v = FloatInput(value=100.0, title="Max velocity", on_update=self.on_update)
 
@@ -74,9 +103,19 @@ class Instance(object):
             lod_threshold=None
         )
 
+        self.plot.extra_y_ranges = {
+            "acc": plt.Range1d(start=0, end=100),
+            "dist": plt.Range1d(start=0, end=100)
+        }
+
+        self.plot.add_layout(plt.LinearAxis(y_range_name="acc"), "left")
+        self.plot.add_layout(plt.LinearAxis(y_range_name="dist"), "left")
+
         self.datasource=plt.ColumnDataSource(
             {
                 "v_trapezoid": [],
+                "a_trapezoid": [],
+                "s_trapezoid": [],
                 "t": []
             }
         )
@@ -95,25 +134,32 @@ class Instance(object):
         doc.add_root(layout)
 
         self.plot.line(source=self.datasource, y="v_trapezoid", x="t")
+        self.plot.line(source=self.datasource, y="a_trapezoid", x="t", y_range_name="acc",
+                       color="red")
+        self.plot.line(source=self.datasource, y="s_trapezoid", x="t", y_range_name="dist",
+                       color="green")
 
     def on_update(self):
-        self.plot.y_range.start = self.start_speed.value
+        self.plot.y_range.start = self.start_speed.value - 10
         trapezoidal = Trapezoidal(self.start_speed.value, self.end_speed.value, self.distance.value,
                                   self.max_v.value, self.max_a.value)
         self.plot.y_range.end = trapezoidal.cruise_v + 10
         self.plot.x_range.end = trapezoidal.t + 0.2
+
+        self.plot.extra_y_ranges["acc"].start = -self.max_a.value - 100
+        self.plot.extra_y_ranges["acc"].end = self.max_a.value + 100
+
+        self.plot.extra_y_ranges["dist"].start = 0
+        self.plot.extra_y_ranges["dist"].end = self.distance.value + 10
+
         ts = np.linspace(0, trapezoidal.t, 5000)
 
         self.datasource.data = {
-            "v_trapezoid": [trapezoidal.v(t) for t in ts],
+            "v_trapezoid": np.array([trapezoidal.v(t) for t in ts]),
+            "a_trapezoid": np.array([trapezoidal.a(t) for t in ts]),
+            "s_trapezoid": np.array([trapezoidal.s(t) for t in ts]),
             "t": ts
         }
-
-
-
-
-
-
 
 
 class PointToPointSimulator(object):
