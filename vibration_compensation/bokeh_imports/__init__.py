@@ -1,4 +1,4 @@
-from bokeh.models import Slider, ColorBar
+from bokeh.models import Slider, ColorBar, TextInput, Range1d
 from bokeh.plotting import Figure, output_file, show, save
 from bokeh.models.sources import ColumnDataSource
 from bokeh.layouts import layout
