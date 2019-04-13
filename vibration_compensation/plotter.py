@@ -36,7 +36,7 @@ class Plotter(object):
 
         def update_data_sources(layer):
             start, end = self.data.layer_index[layer]
-            ts = np.linspace(start, end, 100000)
+            ts = self.data.smoothed_toolpath.fixed_curvature_speeds(start, end, 0.1)
             int_ts = ts.astype(np.int)
             points = self.data.smoothed_toolpath(ts)
             spline_segments_start = points[:-1]

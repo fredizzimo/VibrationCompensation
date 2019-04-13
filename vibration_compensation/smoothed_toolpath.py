@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import brentq, least_squares
+from scipy.optimize import brentq
 from .chandrupatla import chandrupatla
 import math
 
@@ -293,48 +293,29 @@ class SmoothedToolpath(object):
 
 
     def _calculate_uv_coeffs(self):
-        def f_uv(args, expectation):
-            u0, v0, u3, v3 = args
-            res = np.fromiter((
-                u0 ** 2 - v0 ** 2,
-                2.0 * u0 * v0,
-                #u0 ** 2 - v0 ** 2,
-                #2.0 * u0 * v0,
-                #u0 ** 2 - v0 ** 2,
-                #10.0 * u0 * v0 / 9.0,
-                #5.0 * u0 ** 2 / 6.0 + u0 * u3 / 6.0 - 5.0 * v0 ** 2 / 6.0 - v0 * v3 / 6.0,
-                #5.0 * u0 * v0 / 3.0 + u0 * v3 / 6.0 + u3 * v0 / 6.0,
-                #10.0 * u0 ** 2.0 / 21.0 + 11.0 * u0 * u3 / 21.0 - 10.0 * v0 ** 2 / 21.0 - 11.0 * v0 * v3 / 21.0,
-                #20.0 * u0 * v0 / 21.0 + 11.0 * u0 * v3 / 21.0 + 11.0 * u3 * v0 / 21.0,
-                #u0 * u3 - v0 * v3,
-                #u0 * v3 + u3 * v0,
-                #11.0 * u0 * u3 / 21.0 + 10.0 * u3 ** 2 / 21.0 - 3.0 * v0 * v3 / 7.0 - 10.0 * v3 ** 2 / 21.0,
-                #11.0 * u0 * v3 / 21.0 + 11.0 * u3 * v0 / 21.0 + 20.0 * u3 * v3 / 21.0,
-                #u0 * u3 / 6.0 + 5.0 * u3 ** 2 / 6.0 - 5.0 * v3 ** 2.0 / 6.0,
-                #u0 * v3 / 6.0 + u3 * v0 / 6.0 + 5.0 * u3 * v3 / 3.0,
-                #u3 ** 2 - v3 ** 2.0,
-                #2.0 * u3 * v3,
-                #u3 ** 2.0 - v3 ** 2.0,
-                #2.0 * u3 * v3,
-                u3 ** 2 - v3 ** 2,
-                2.0 * u3 * v3
-            ), count=4, dtype=np.float)
-            return res - expectation
+        d0 = np.empty(self.curves.shape[2], dtype=np.complex128)
+        d5 = np.empty(self.curves.shape[2], dtype=np.complex128)
+        d0.real = self.curves[1][0] - self.curves[0][0]
+        d0.imag = self.curves[1][1] - self.curves[0][1]
+        d5.real = self.curves[6][0] - self.curves[5][0]
+        d5.imag = self.curves[6][1] - self.curves[5][1]
+        K = 11
+
+        d0 = d0 * K
+        d5 = d5 * K
+
+        w0 = np.sqrt(d0)
+        w3 = d5 / w0
 
         self.uv = np.empty((6, 2, self.curves.shape[2]))
-
-        expectations = 11.0 * (self.curves[1:] - self.curves[0:-1])
-        expectations = expectations.reshape(22, expectations.shape[2])
-        expectations = expectations[[0,1,20,21]]
-        for i in range(expectations.shape[1]):
-            guess = np.array(expectations[:,i], copy=True)
-            res = least_squares(f_uv, guess, args=(expectations[:,i],), method="trf")
-            self.uv[0,:,i] = res.x[0:2]
-            self.uv[3,:,i] = res.x[2:4]
-        self.uv[1,:,:] = self.uv[0,:,:]
-        self.uv[2,:,:] = self.uv[0,:,:]
-        self.uv[4,:,:] = self.uv[3,:,:]
-        self.uv[5,:,:] = self.uv[3,:,:]
+        self.uv[0][0] = w0.real
+        self.uv[0][1] = w0.imag
+        self.uv[1] = self.uv[0]
+        self.uv[2] = self.uv[0]
+        self.uv[3][0] = w3.real
+        self.uv[3][1] = w3.imag
+        self.uv[4] = self.uv[3]
+        self.uv[5] = self.uv[3]
         comb = np.empty(6)
         comb[0] = 1.0
         for i in range(5):

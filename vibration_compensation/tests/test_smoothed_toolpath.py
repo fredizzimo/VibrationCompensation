@@ -44,7 +44,7 @@ def plotter(figures, request):
             line_color="red",
             line_dash="dotted"
         )
-        ts = data.smoothed_toolpath.fixed_curvature_speeds(0, data.smoothed_toolpath.start_xy.shape[0], 0.01)
+        ts = data.smoothed_toolpath.fixed_curvature_speeds(0, data.smoothed_toolpath.start_xy.shape[0], 0.1)
         points = data.smoothed_toolpath(ts)
 
         p.line(
