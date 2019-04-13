@@ -193,6 +193,7 @@ class SmoothedToolpath(object):
     def fixed_curvature_speeds(self, start, end, curve_factor):
         current = start
         ts = [start, current]
+        unsigned_c = math.tan(0.5*curve_factor)
         while current < end:
             index = np.searchsorted(self.segment_start, current, side="right")
             index = index - 1
@@ -200,11 +201,16 @@ class SmoothedToolpath(object):
             if self.segment_number[index] != -1:
                 current = self.segment_end[index]
             else:
+                uv0=self.uv[0,:,self.curve_number[index[0]]]
+                uv5=self.uv[5,:,self.curve_number[index[0]]]
+                uvdelta = uv5 - uv0
+                curvature_sign = np.sign(uv0[0]*uvdelta[1] - uvdelta[0]*uv0[1])
+                c = curvature_sign * unsigned_c
+
                 prev = np.empty((1, 2))
                 current_t = np.atleast_1d(current)
                 self._evaluate_bernstein_common(prev, current_t, index, self.uv_coeffs)
                 def f(t):
-                    c = math.tan(0.5*curve_factor)
                     p = np.empty((1,2))
                     t = np.atleast_1d(t)
                     self._evaluate_bernstein_common(p, t, index, self.uv_coeffs)
@@ -320,5 +326,5 @@ class SmoothedToolpath(object):
         comb[0] = 1.0
         for i in range(5):
             comb[i+1] = comb[i] * (1.0 * (5-i) / (i+1.0))
-        self.uv_coeffs = self.uv
+        self.uv_coeffs = self.uv.copy()
         self.uv_coeffs *= (comb / 5.0)[:,np.newaxis,np.newaxis]

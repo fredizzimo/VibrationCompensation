@@ -29,8 +29,8 @@ def plotter(figures, request):
         p = plt.Figure(
             plot_width=1000,
             plot_height=1000,
-            x_range=(-50, 250),
-            y_range=(-50, 250),
+            x_range=(-250, 250),
+            y_range=(-250, 250),
             match_aspect=True,
             lod_threshold=None,
             title=request.node.name
@@ -341,6 +341,22 @@ def test_135_corner(plotter):
     data = generate_curves([
         "G1 X100 Y0",
         "G1 X200 Y100"
+    ], maximum_error=0.01)
+    assert data.smoothed_toolpath.segment_start.shape[0] == 3
+    straight_segment(data, l=0, s=0, start="start", end="on")
+    straight_segment(data, l=0, s=0, start="start", end="on")
+    corner_segment(data, l=0, s=1, start="on", end="on")
+    straight_segment(data, l=1, s=2, start="on", end="end")
+    assert np.sum(data.smoothed_toolpath.segment_lengths) < 100 + np.linalg.norm([100, 100])
+    assert np.sum(data.smoothed_toolpath.segment_lengths) == \
+           pytest.approx(100 + np.linalg.norm([100, 100]), abs=0.1)
+    check_distances(data)
+    plotter(data)
+
+def test_135_corner_counter_clockwise(plotter):
+    data = generate_curves([
+        "G1 X-100 Y-100",
+        "G1 X-200 Y-100"
     ], maximum_error=0.01)
     assert data.smoothed_toolpath.segment_start.shape[0] == 3
     straight_segment(data, l=0, s=0, start="start", end="on")
