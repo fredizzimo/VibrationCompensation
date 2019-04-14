@@ -27,7 +27,7 @@ class Trapezoidal(object):
         self.max_v = max_v
         self.max_a = max_a
 
-        if distance * max_a >  max_v**2.0 - (start_v**2.0 - end_v**2.0) / 2.0:
+        if distance * max_a > max_v**2.0 - (start_v**2.0 + end_v**2.0) / 2.0:
             self.cruise_v = max_v
             self.t_a = (max_v - start_v) / max_a
             self.t_d = (max_v - end_v) / max_a
@@ -46,17 +46,17 @@ class Trapezoidal(object):
 
 
     def v(self, t):
-        if t <= self.t_a:
+        if t < self.t_a:
             return self.start_v + (self.cruise_v - self.start_v) / self.t_a * t
         elif t <= self.t - self.t_d:
             return self.cruise_v
         elif t <= self.t:
-            return self.end_v + (self.cruise_v - self.end_v)  / self.t_d * (self.t - t)
+            return self.end_v + (self.cruise_v - self.end_v) / self.t_d * (self.t - t)
         else:
             return self.end_v
 
     def a(self, t):
-        if t <= self.t_a:
+        if t < self.t_a:
             return self.max_a
         elif t <= self.t - self.t_d:
             return 0
@@ -66,7 +66,7 @@ class Trapezoidal(object):
             return 0
 
     def s(self, t):
-        if t <= self.t_a:
+        if t < self.t_a:
             return (
                self.start_v * t +
                (self.cruise_v - self.start_v) / (2.0*self.t_a) * t**2
@@ -139,10 +139,13 @@ class Instance(object):
         self.plot.line(source=self.datasource, y="s_trapezoid", x="t", y_range_name="dist",
                        color="green")
 
+
     def on_update(self):
-        self.plot.y_range.start = self.start_speed.value - 10
         trapezoidal = Trapezoidal(self.start_speed.value, self.end_speed.value, self.distance.value,
                                   self.max_v.value, self.max_a.value)
+
+        min_speed = min(self.start_speed.value, trapezoidal.end_v)
+        self.plot.y_range.start = min_speed - 10
         self.plot.y_range.end = trapezoidal.cruise_v + 10
         self.plot.x_range.end = trapezoidal.t + 0.2
 
