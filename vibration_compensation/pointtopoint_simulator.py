@@ -67,7 +67,7 @@ class Trapezoidal(object):
         else:
             return 0
 
-    def s(self, t):
+    def x(self, t):
         if t < self.t_a:
             return (
                self.start_v * t +
@@ -85,6 +85,94 @@ class Trapezoidal(object):
             return self.distance
 
 
+class MoveGraph(object):
+    def __init__(self, start_speed, end_speed):
+        self.plot = plt.Figure(
+            plot_width=1000,
+            plot_height=500,
+            x_range=(0, 5),
+            y_range=(start_speed, end_speed),
+            match_aspect=True,
+            lod_threshold=None
+        )
+
+        self.plot.extra_y_ranges = {
+            "a": plt.Range1d(start=0, end=100),
+            "x": plt.Range1d(start=0, end=100),
+            "error": plt.Range1d(start=0, end=100)
+        }
+
+        self.plot.add_layout(plt.LinearAxis(y_range_name="a"), "left")
+        self.plot.add_layout(plt.LinearAxis(y_range_name="x"), "left")
+        self.plot.add_layout(plt.LinearAxis(y_range_name="error"), "left")
+
+        self.datasource=plt.ColumnDataSource(
+            {
+                "v": [],
+                "a": [],
+                "x": [],
+                "actual_trapezoid": [],
+                "error": [],
+                "t": []
+            }
+        )
+
+        self.plot.line(source=self.datasource, y="v", x="t")
+        self.plot.line(source=self.datasource, y="a", x="t", y_range_name="a",
+                       color="red")
+        self.plot.line(source=self.datasource, y="x", x="t", y_range_name="x",
+                       color="green")
+        self.plot.line(source=self.datasource, y="actual", x="t", y_range_name="x",
+                       color="black")
+        self.plot.line(source=self.datasource, y="error", x="t", y_range_name="error",
+                       color="black")
+
+    def update(self, move, distance, max_v, max_a, end_t, frequency):
+
+        self.plot.y_range.start = 0
+        self.plot.y_range.end = max_v
+
+        self.plot.x_range.end = end_t
+
+        self.plot.extra_y_ranges["a"].start = -max_a - 100
+        self.plot.extra_y_ranges["a"].end = max_a + 100
+
+        self.plot.extra_y_ranges["x"].start = 0
+        self.plot.extra_y_ranges["x"].end = distance + 10
+
+        ts = np.linspace(0, end_t, 5000)
+        x = np.array([move.x(t) for t in ts])
+
+        actual, error = self.simulate_vibration(ts, x, move, frequency)
+
+        self.plot.extra_y_ranges["error"].start = np.min(error)
+        self.plot.extra_y_ranges["error"].end = np.max(error)
+
+        self.datasource.data = {
+            "v": np.array([move.v(t) for t in ts]),
+            "a": np.array([move.a(t) for t in ts]),
+            "x": x,
+            "actual": actual,
+            "error": error,
+            "t": ts
+        }
+
+    @staticmethod
+    def simulate_vibration(ts, x, move, frequency):
+        m = 0.1
+        k = (frequency * 2.0 * math.pi)**2 * m
+        k_div_m = k / m
+
+        def f(t, U):
+            return [U[1], -k_div_m*(U[0] - move.x(t))]
+
+        res = solve_ivp(f, (ts[0], ts[-1]), np.array([0, 0]),
+                        t_eval=ts, method="RK45", max_step=0.001)
+        actual = res.y[0]
+        error = actual - x
+        return actual, error
+
+
 class Instance(object):
     def __init__(self, doc):
         self.start_speed = FloatInput(value=0.0, title="Start Speed", on_update=self.on_update)
@@ -94,35 +182,8 @@ class Instance(object):
         self.max_v = FloatInput(value=100.0, title="Max velocity", on_update=self.on_update)
         self.frequency = FloatInput(value=30, title="Frequency", on_update=self.on_update)
 
-        self.plot = plt.Figure(
-            plot_width=1000,
-            plot_height=500,
-            x_range=(0, 5),
-            y_range=(self.start_speed.value, self.end_speed.value),
-            match_aspect=True,
-            lod_threshold=None
-        )
+        self.trapezoidal_graph = MoveGraph(self.start_speed.value, self.end_speed.value)
 
-        self.plot.extra_y_ranges = {
-            "acc": plt.Range1d(start=0, end=100),
-            "dist": plt.Range1d(start=0, end=100),
-            "err": plt.Range1d(start=0, end=100)
-        }
-
-        self.plot.add_layout(plt.LinearAxis(y_range_name="acc"), "left")
-        self.plot.add_layout(plt.LinearAxis(y_range_name="dist"), "left")
-        self.plot.add_layout(plt.LinearAxis(y_range_name="err"), "left")
-
-        self.datasource=plt.ColumnDataSource(
-            {
-                "v_trapezoid": [],
-                "a_trapezoid": [],
-                "s_trapezoid": [],
-                "actual_trapezoid": [],
-                "e_trapezoid": [],
-                "t": []
-            }
-        )
         self.on_update()
 
         layout = plt.layout(
@@ -133,67 +194,17 @@ class Instance(object):
                 self.max_a.widget,
                 self.max_v.widget,
                 self.frequency.widget,
-                self.plot
+                self.trapezoidal_graph.plot
             ]
         )
         doc.add_root(layout)
 
-        self.plot.line(source=self.datasource, y="v_trapezoid", x="t")
-        self.plot.line(source=self.datasource, y="a_trapezoid", x="t", y_range_name="acc",
-                       color="red")
-        self.plot.line(source=self.datasource, y="s_trapezoid", x="t", y_range_name="dist",
-                       color="green")
-        self.plot.line(source=self.datasource, y="actual_trapezoid", x="t", y_range_name="dist",
-                       color="black")
-        self.plot.line(source=self.datasource, y="e_trapezoid", x="t", y_range_name="err",
-                       color="black")
-
     def on_update(self):
         trapezoidal = Trapezoidal(self.start_speed.value, self.end_speed.value, self.distance.value,
                                   self.max_v.value, self.max_a.value)
-
-        min_speed = min(self.start_speed.value, trapezoidal.end_v)
-        self.plot.y_range.start = min_speed - 10
-        self.plot.y_range.end = trapezoidal.cruise_v + 10
-        self.plot.x_range.end = trapezoidal.t + 5.0 / self.frequency.value
-
-        self.plot.extra_y_ranges["acc"].start = -self.max_a.value - 100
-        self.plot.extra_y_ranges["acc"].end = self.max_a.value + 100
-
-        self.plot.extra_y_ranges["dist"].start = 0
-        self.plot.extra_y_ranges["dist"].end = self.distance.value + 10
-
-        ts = np.linspace(0, self.plot.x_range.end, 5000)
-        s = np.array([trapezoidal.s(t) for t in ts])
-
-        actual, error = self.simulate_vibration(ts, s, trapezoidal)
-
-        self.plot.extra_y_ranges["err"].start = np.min(error)
-        self.plot.extra_y_ranges["err"].end = np.max(error)
-
-        self.datasource.data = {
-            "v_trapezoid": np.array([trapezoidal.v(t) for t in ts]),
-            "a_trapezoid": np.array([trapezoidal.a(t) for t in ts]),
-            "s_trapezoid": s,
-            "actual_trapezoid": actual,
-            "e_trapezoid": error,
-            "t": ts
-        }
-
-    def simulate_vibration(self, ts, s, move):
-        m = 0.1
-        frequency = self.frequency.value
-        k = (frequency * 2.0 * math.pi)**2 * m
-        k_div_m = k / m
-
-        def f(t, U):
-            return [U[1], -k_div_m*(U[0] - move.s(t))]
-
-        res = solve_ivp(f, (ts[0], ts[-1]), np.array([0, 0]),
-                        t_eval=ts, method="RK45", max_step=0.001)
-        actual = res.y[0]
-        error = actual - s
-        return actual, error
+        end_t = trapezoidal.t + 5.0 / self.frequency.value
+        self.trapezoidal_graph.update(trapezoidal, self.distance.value, self.max_v.value,
+                                      self.max_a.value, end_t, self.frequency.value)
 
 
 class PointToPointSimulator(object):
