@@ -59,8 +59,7 @@ Cell[BoxData[{
        RowBox[{"FrontEnd`RemoveOptions", "[", 
         RowBox[{"FrontEnd`SelectionObject", ",", "\"\<CellChangeTimes\>\""}], 
         "]"}], "}"}], "]"}]}]}], "]"}]}], "\[IndentingNewLine]"}], "Code",
- CellLabel->
-  "In[326]:=",ExpressionUUID->"b1a5ad45-9f5b-487c-8a84-be30af13977d"],
+ CellLabel->"In[1]:=",ExpressionUUID->"b1a5ad45-9f5b-487c-8a84-be30af13977d"],
 
 Cell[BoxData[{
  RowBox[{
@@ -131,8 +130,8 @@ Cell[BoxData[{
      "Simplify"}], " ", "//", " ", "TraditionalForm"}]}], "Code"], "\n", 
  RowBox[{
   StyleBox[
-   RowBox[{"printRuleEquation", "[", 
-    RowBox[{"var_", ",", " ", "rulevar_", ",", " ", "rules_"}], "]"}], "Code"], 
+   RowBox[{"printEquation", "[", 
+    RowBox[{"var_", ",", " ", "expr_"}], "]"}], "Code"], 
   StyleBox[" ", "Code"], 
   StyleBox[":=", "Code"], 
   StyleBox["\n", "Code"], "\t", 
@@ -140,11 +139,22 @@ Cell[BoxData[{
    RowBox[{"Equal", "[", 
     RowBox[{
      RowBox[{"printSubscripts", "@", "var"}], ",", " ", 
-     RowBox[{"printRule", "[", 
-      RowBox[{"rulevar", ",", " ", "rules"}], "]"}]}], "]"}], " ", "//", " ", 
-   "TraditionalForm"}]}]}], "Code",
- CellLabel->
-  "In[339]:=",ExpressionUUID->"8a3e706e-a59b-4924-bdd4-da4d79de4858"],
+     RowBox[{"printExpression", "[", "expr", "]"}]}], "]"}], " ", "//", " ", 
+   "TraditionalForm"}]}], "\n", 
+ RowBox[{
+  StyleBox[
+   RowBox[{"printRuleEquation", "[", 
+    RowBox[{"var_", ",", " ", "rulevar_", ",", " ", "rules_"}], "]"}], "Code"], 
+  StyleBox[" ", "Code"], 
+  StyleBox[":=", "Code"], 
+  StyleBox["\n", "Code"], "\t", 
+  RowBox[{"printEquation", "[", 
+   RowBox[{"var", ",", " ", 
+    RowBox[{
+     RowBox[{"(", 
+      RowBox[{"rulevar", " ", "/.", " ", "rules"}], ")"}], " ", "//", " ", 
+     "Simplify"}]}], "]"}]}]}], "Code",
+ CellLabel->"In[75]:=",ExpressionUUID->"8a3e706e-a59b-4924-bdd4-da4d79de4858"],
 
 Cell[BoxData[
  RowBox[{
@@ -229,8 +239,12 @@ Cell[BoxData[
            RowBox[{"total", ",", " ", 
             RowBox[{"t", " ", ">", " ", "intervalEnd"}]}], "}"}]}], "]"}]}], 
        "]"}], "]"}]}]}], "]"}]}]], "Code",
- CellLabel->
-  "In[344]:=",ExpressionUUID->"f91edb74-1a25-4c1e-bbcd-644d0150e255"],
+ CellLabel->"In[19]:=",ExpressionUUID->"f91edb74-1a25-4c1e-bbcd-644d0150e255"],
+
+Cell[CellGroupData[{
+
+Cell["Trapezoidal Trajectory", "Section",
+ CellTags->"cdf",ExpressionUUID->"349d0f08-a05a-461b-87f0-f369297e46c5"],
 
 Cell[BoxData[
  RowBox[{"\n", "\n", 
@@ -364,7 +378,10 @@ Cell[BoxData[
       "t_", ",", " ", "vS_", ",", " ", "vE_", ",", " ", "d_", ",", " ", 
        "vMax_", ",", " ", "aMax_"}], "]"}], " ", ":=", "\n", "\t", 
      RowBox[{"Evaluate", "[", 
-      RowBox[{"a", " ", "//.", " ", "trapezoidal"}], "]"}]}], ";"}], "\n", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"a", " ", "//.", " ", "trapezoidal"}], ")"}], " ", "//", " ", 
+       "Simplify"}], "]"}]}], ";"}], "\n", 
    RowBox[{
     RowBox[{
      RowBox[{"trapezoidalV", "[", 
@@ -372,7 +389,10 @@ Cell[BoxData[
       "t_", ",", " ", "vS_", ",", " ", "vE_", ",", " ", "d_", ",", " ", 
        "vMax_", ",", " ", "aMax_"}], "]"}], " ", ":=", "\n", "\t", 
      RowBox[{"Evaluate", "[", 
-      RowBox[{"v", " ", "//.", " ", "trapezoidal"}], "]"}]}], ";"}], "\n", 
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"v", " ", "//.", " ", "trapezoidal"}], ")"}], " ", "//", " ", 
+       "Simplify"}], "]"}]}], ";"}], "\n", 
    RowBox[{
     RowBox[{
      RowBox[{"trapezoidalX", "[", 
@@ -380,10 +400,11 @@ Cell[BoxData[
       "t_", ",", " ", "vS_", ",", " ", "vE_", ",", " ", "d_", ",", " ", 
        "vMax_", ",", " ", "aMax_"}], "]"}], " ", ":=", "\n", "\t", 
      RowBox[{"Evaluate", "[", 
-      RowBox[{"x", " ", "//.", " ", "trapezoidal"}], "]"}]}], ";"}], 
-   "\n"}]}]], "Code",
- CellLabel->
-  "In[345]:=",ExpressionUUID->"bda53053-4d26-4673-98fe-608246cc28c1"],
+      RowBox[{
+       RowBox[{"(", 
+        RowBox[{"x", " ", "//.", " ", "trapezoidal"}], ")"}], " ", "//", " ", 
+       "Simplify"}], "]"}]}], ";"}], "\n"}]}]], "Code",
+ CellLabel->"In[46]:=",ExpressionUUID->"bda53053-4d26-4673-98fe-608246cc28c1"],
 
 Cell[BoxData[
  RowBox[{"CellPrint", "[", 
@@ -415,68 +436,92 @@ respectively are defined as\\n\\n\>\"", ",", "\n", "\t",
     ",", " ", 
     RowBox[{"CellTags", " ", "\[Rule]", " ", "\"\<cdf\>\""}]}], "]"}], "\n", 
   "]"}]], "Code",
- CellLabel->
-  "In[374]:=",ExpressionUUID->"037b150d-d157-4ccc-b87e-45d1e520dc54"],
+ CellLabel->"In[81]:=",ExpressionUUID->"037b150d-d157-4ccc-b87e-45d1e520dc54"],
 
-Cell[BoxData[
- RowBox[{"\n", 
-  RowBox[{"CellPrint", "[", 
-   RowBox[{"TextCell", "[", "\n", "\t", 
-    RowBox[{
-     RowBox[{"DynamicModule", "[", 
-      RowBox[{
-       RowBox[{"{", 
-        RowBox[{"t", ",", " ", 
-         RowBox[{"vS", " ", "=", " ", "20"}], ",", " ", 
-         RowBox[{"vE", " ", "=", " ", "0"}], ",", " ", 
-         RowBox[{"d", " ", "=", " ", "50"}], ",", " ", 
-         RowBox[{"vMax", " ", "=", " ", "100"}], ",", " ", 
-         RowBox[{"aMax", " ", "=", " ", "1000"}]}], "}"}], ",", "\n", "\t\t", 
-       
-       RowBox[{"{", "\n", "\t\t\t", 
-        RowBox[{
-         RowBox[{"Slider", "[", 
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"defaultAMax", " ", "=", " ", "1000"}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{"defaultVMax", " ", "=", " ", "100"}], ";"}], "\n", 
+ RowBox[{"CellPrint", "[", 
+  RowBox[{"TextCell", "[", "\n", "\t", 
+   RowBox[{
+    RowBox[{"Manipulate", "[", "\n", "\t\t", 
+     RowBox[{
+      RowBox[{"Module", "[", 
+       RowBox[{
+        RowBox[{"{", "}"}], ",", "\n", "\t\t\t", 
+        RowBox[{"Column", "[", 
+         RowBox[{"{", "\n", "\t\t\t\t", 
           RowBox[{
-           RowBox[{"Dynamic", "[", "aMax", "]"}], ",", " ", 
-           RowBox[{"{", 
-            RowBox[{"1", ",", " ", "10000"}], "}"}]}], "]"}], ",", "\n", 
-         "\t\t\t", 
-         RowBox[{"Dynamic", "[", "aMax", "]"}], ",", "\n", "\t\t\t", 
-         RowBox[{"Dynamic", "[", 
-          RowBox[{"printSubscripts", "[", 
-           RowBox[{"N", "[", 
-            RowBox[{"trapezoidalA", "[", 
-             RowBox[{
-              RowBox[{"Symbol", "[", "\"\<t\>\"", "]"}], ",", " ", "vS", ",", 
-              " ", "vE", ",", " ", "d", ",", " ", "vMax", ",", " ", "aMax"}], 
-             "]"}], "]"}], "]"}], "]"}], ",", "\n", "\t\t\t", 
-         RowBox[{"Dynamic", "[", 
-          RowBox[{"Plot", "[", 
-           RowBox[{
-            RowBox[{"{", "\n", "\t\t\t\t", 
-             RowBox[{
-              RowBox[{"trapezoidalA", "[", 
-               RowBox[{
-               "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
-                "vMax", ",", " ", "aMax"}], "]"}], ",", "\n", "\t\t\t\t", 
-              RowBox[{"trapezoidalV", "[", 
-               RowBox[{
-               "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
-                "vMax", ",", " ", "aMax"}], "]"}], ",", "\n", "\t\t\t\t", 
-              RowBox[{"trapezoidalX", "[", 
-               RowBox[{
-               "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
-                "vMax", ",", " ", "aMax"}], "]"}]}], "}"}], ",", "\n", 
-            "\t\t\t\t", 
-            RowBox[{"{", 
-             RowBox[{"t", ",", " ", "0", ",", " ", "1"}], "}"}]}], "]"}], 
-          "]"}]}], "\n", "\t\t", "}"}], ",", "\n", "\t\t", 
-       RowBox[{"SaveDefinitions", " ", "\[Rule]", " ", "True"}]}], "\n", 
-      "]"}], ",", " ", "\"\<Text\>\"", ",", " ", 
-     RowBox[{"CellTags", " ", "\[Rule]", " ", "\"\<cdf\>\""}]}], "]"}], 
-   "]"}]}]], "Code",
- CellLabel->
-  "In[379]:=",ExpressionUUID->"78ef94a1-fa5f-4eac-bb73-61701d966d2c"],
+           RowBox[{"Plot", "[", 
+            RowBox[{
+             RowBox[{"{", "\n", "\t\t\t\t\t", 
+              RowBox[{
+               RowBox[{"trapezoidalA", "[", 
+                RowBox[{
+                "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
+                 "vMax", ",", " ", "aMax"}], "]"}], ",", "\n", "\t\t\t\t\t", 
+               RowBox[{"trapezoidalV", "[", 
+                RowBox[{
+                "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
+                 "vMax", ",", " ", "aMax"}], "]"}], ",", "\n", "\t\t\t\t\t", 
+               RowBox[{"trapezoidalX", "[", 
+                RowBox[{
+                "t", ",", " ", "vS", ",", " ", "vE", ",", " ", "d", ",", " ", 
+                 "vMax", ",", " ", "aMax"}], "]"}]}], "}"}], ",", "\n", 
+             "\t\t\t\t\t", 
+             RowBox[{"{", 
+              RowBox[{"t", ",", " ", "0", ",", " ", "1"}], "}"}]}], "\n", 
+            "\t\t\t\t", "]"}], ",", "\n", "\t\t\t\t", 
+           RowBox[{"Style", "[", "\n", "\t\t\t\t\t", 
+            RowBox[{
+             RowBox[{"printEquation", "[", "\n", "\t\t\t\t\t\t", 
+              RowBox[{
+               RowBox[{"Symbol", "[", "\"\<v\>\"", "]"}], ",", "\n", 
+               "\t\t\t\t\t\t", 
+               RowBox[{"N", "[", 
+                RowBox[{"trapezoidalV", "[", 
+                 RowBox[{
+                  RowBox[{"Symbol", "[", "\"\<t\>\"", "]"}], ",", " ", "vS", 
+                  ",", " ", "vE", ",", " ", "d", ",", " ", "vMax", ",", " ", 
+                  "aMax"}], "]"}], "\n", "\t\t\t\t\t", "]"}]}], "]"}], ",", 
+             "\n", "\t\t\t\t\t", "Tiny"}], "\n", "\t\t\t\t", "]"}]}], "\n", 
+          "\t\t\t", "}"}], "]"}]}], "\n", "\t\t", "]"}], ",", "\n", "\t\t", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"vMax", ",", " ", "defaultVMax"}], "}"}], ",", " ", "1", ",",
+         " ", "1000", ",", " ", 
+        RowBox[{"Appearance", " ", "\[Rule]", " ", "\"\<Labeled\>\""}]}], 
+       "}"}], ",", "\n", "\t\t", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"aMax", ",", " ", "defaultAMax"}], "}"}], ",", " ", "1", ",",
+         " ", "10000", ",", " ", 
+        RowBox[{"Appearance", " ", "\[Rule]", " ", "\"\<Labeled\>\""}]}], 
+       "}"}], ",", "\n", "\t\t", 
+      RowBox[{"{", 
+       RowBox[{
+        RowBox[{"{", 
+         RowBox[{"d", ",", " ", "50"}], "}"}], ",", " ", "0", ",", " ", "100",
+         ",", " ", 
+        RowBox[{"Appearance", " ", "\[Rule]", " ", "\"\<Labeled\>\""}]}], 
+       "}"}], ",", "\n", "\t\t", 
+      RowBox[{"{", 
+       RowBox[{"vS", ",", " ", "0", ",", " ", "100", ",", " ", 
+        RowBox[{"Appearance", " ", "\[Rule]", " ", "\"\<Labeled\>\""}]}], 
+       "}"}], ",", "\n", "\t\t", 
+      RowBox[{"{", 
+       RowBox[{"vE", ",", " ", "0", ",", " ", "100", ",", " ", 
+        RowBox[{"Appearance", " ", "\[Rule]", " ", "\"\<Labeled\>\""}]}], 
+       "}"}], ",", "\n", "\t\t", 
+      RowBox[{"SaveDefinitions", " ", "\[Rule]", " ", "True"}]}], "\n", "]"}],
+     ",", " ", "\"\<Text\>\"", ",", " ", 
+    RowBox[{"CellTags", " ", "\[Rule]", " ", "\"\<cdf\>\""}]}], "]"}], 
+  "]"}]}], "Code",
+ CellLabel->"In[95]:=",ExpressionUUID->"61604ad7-d33d-465e-b1c6-c0cf7122b529"],
 
 Cell[BoxData[{
  RowBox[{"ClearAll", "[", "\"\<Global`*\>\"", "]"}], "\[IndentingNewLine]", 
@@ -813,41 +858,45 @@ Cell[BoxData[{
  CellLabel->
   "In[269]:=",ExpressionUUID->"2c00f5bf-774b-4859-b7ff-5dd348462164"],
 
-Cell[BoxData[
+Cell[BoxData[{
  RowBox[{
-  RowBox[{"saveCdf", "[", "]"}], " ", ":=", " ", 
-  RowBox[{"Module", "[", "\n", "\t", 
-   RowBox[{
-    RowBox[{"{", 
-     RowBox[{"outputFileName", ",", " ", "cdf", ",", " ", "cells"}], "}"}], 
-    ",", "\n", "\t", 
+  RowBox[{
+   RowBox[{"saveCdf", "[", "]"}], " ", ":=", " ", 
+   RowBox[{"Module", "[", "\n", "\t", 
     RowBox[{
-     RowBox[{"outputFileName", " ", "=", " ", 
-      RowBox[{
-       RowBox[{"FileBaseName", "[", 
-        RowBox[{"NotebookFileName", "[", "]"}], "]"}], " ", "<>", " ", 
-       "\"\<.cdf\>\""}]}], ";", "\n", "\t", 
-     RowBox[{"outputFileName", " ", "=", " ", 
-      RowBox[{"FileNameJoin", "[", 
-       RowBox[{"{", 
-        RowBox[{
-         RowBox[{"NotebookDirectory", "[", "]"}], ",", " ", 
-         "outputFileName"}], "}"}], "]"}]}], ";", "\n", "\t", 
-     RowBox[{"cells", " ", "=", " ", 
-      RowBox[{"Cells", "[", 
-       RowBox[{"CellTags", " ", "\[Rule]", " ", "\"\<cdf\>\""}], "]"}]}], ";",
-      "\n", "\t", 
-     RowBox[{"cdf", " ", "=", " ", 
-      RowBox[{"CreateDocument", "[", 
-       RowBox[{"NotebookRead", "[", "cells", "]"}], "]"}]}], ";", "\n", "\t", 
-     
-     RowBox[{"CDFDeploy", "[", 
-      RowBox[{"outputFileName", ",", " ", "cdf"}], "]"}], ";", "\n", "\t", 
-     RowBox[{"NotebookClose", "[", "cdf", "]"}], ";"}]}], "\n", 
-   "]"}]}]], "Code",ExpressionUUID->"7885f3f7-adb5-4431-8d66-82acccc89658"]
+     RowBox[{"{", 
+      RowBox[{"outputFileName", ",", " ", "cdf", ",", " ", "cells"}], "}"}], 
+     ",", "\n", "\t", 
+     RowBox[{
+      RowBox[{"outputFileName", " ", "=", " ", 
+       RowBox[{
+        RowBox[{"FileBaseName", "[", 
+         RowBox[{"NotebookFileName", "[", "]"}], "]"}], " ", "<>", " ", 
+        "\"\<.cdf\>\""}]}], ";", "\n", "\t", 
+      RowBox[{"outputFileName", " ", "=", " ", 
+       RowBox[{"FileNameJoin", "[", 
+        RowBox[{"{", 
+         RowBox[{
+          RowBox[{"NotebookDirectory", "[", "]"}], ",", " ", 
+          "outputFileName"}], "}"}], "]"}]}], ";", "\n", "\t", 
+      RowBox[{"cells", " ", "=", " ", 
+       RowBox[{"Cells", "[", 
+        RowBox[{"CellTags", " ", "\[Rule]", " ", "\"\<cdf\>\""}], "]"}]}], 
+      ";", "\n", "\t", 
+      RowBox[{"cdf", " ", "=", " ", 
+       RowBox[{"CreateDocument", "[", 
+        RowBox[{"NotebookRead", "[", "cells", "]"}], "]"}]}], ";", "\n", "\t", 
+      RowBox[{"CDFDeploy", "[", 
+       RowBox[{"outputFileName", ",", " ", "cdf"}], "]"}], ";", "\n", "\t", 
+      RowBox[{"NotebookClose", "[", "cdf", "]"}], ";"}]}], "\n", "]"}]}], 
+  "\n"}], "\n", 
+ RowBox[{"saveCdf", "[", "]"}]}], "Code",
+ CellLabel->
+  "In[61]:=",ExpressionUUID->"7885f3f7-adb5-4431-8d66-82acccc89658"]
+}, Open  ]]
 },
 WindowSize->{788, 637},
-WindowMargins->{{Automatic, 397}, {93, Automatic}},
+WindowMargins->{{Automatic, 484}, {Automatic, 88}},
 PrivateNotebookOptions->{"FileOutlineCache"->False},
 ShowCellTags->True,
 AutoIndent->False,
