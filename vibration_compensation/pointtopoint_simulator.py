@@ -46,7 +46,6 @@ class Trapezoidal(object):
             self.t_d = (self.cruise_v - end_v) / max_a
             self.t = self.t_a + self.t_d
 
-
     def v(self, t):
         if t < self.t_a:
             return self.start_v + (self.cruise_v - self.start_v) / self.t_a * t
@@ -84,6 +83,59 @@ class Trapezoidal(object):
         else:
             return self.distance
 
+
+class SmoothStep4(object):
+    def __init__(self, start_v, end_v, distance, max_v, max_a):
+        self.trapezoidal = Trapezoidal(start_v, end_v, distance, max_v, max_a)
+        self.t = self.trapezoidal.t
+
+    def v(self, t):
+        t_a = self.trapezoidal.t_a
+        t_d = self.trapezoidal.t_d
+        start_v = self.trapezoidal.start_v
+        end_v = self.trapezoidal.end_v
+        a = self.trapezoidal.max_a
+        if t < t_a:
+            return start_v + (3.0*a*t_a*t**2 - 2.0*a*t**3.0) / t_a**2.0
+        elif t <= self.t - t_d:
+            return self.trapezoidal.cruise_v
+        elif t <= self.t:
+            return end_v + (3.0*a*t_d*(self.t-t)**2 - 2.0*a*(self.t-t)**3.0) / t_d**2.0
+        else:
+            return self.trapezoidal.end_v
+
+    def a(self, t):
+        t_a = self.trapezoidal.t_a
+        t_d = self.trapezoidal.t_d
+        a = self.trapezoidal.max_a
+        if t < t_a:
+            return (6.0*a*t*(t_a-t)) / t_a**2.0
+        elif t <= self.t - t_d:
+            return 0
+        elif t <= self.t:
+            t = self.t - t
+            return -(6.0*a*t*(t_d-t)) / t_d**2.0
+        else:
+            return 0
+
+    def x(self, t):
+        t_a = self.trapezoidal.t_a
+        t_d = self.trapezoidal.t_d
+        a = self.trapezoidal.max_a
+        start_v = self.trapezoidal.start_v
+        if t <= t_a:
+            return (
+                start_v * t +
+                a*t**3.0*(2.0*t_a-t) / (2.0*t_a**2.0)
+            ) if t_a > 0 else 0.0
+        elif t <= self.t - t_d:
+            return self.x(t_a) + self.trapezoidal.cruise_v * (t - t_a)
+        elif t <= self.t:
+            d_start = self.t - t_d
+            t = t - d_start
+            return self.x(d_start) + self.trapezoidal.cruise_v*t - a*t**3.0*(2.0*t_d-t) / (2.0*t_d**2.0)
+        else:
+            return self.trapezoidal.distance
 
 class MoveGraph(object):
     def __init__(self, start_speed, end_speed):
@@ -130,12 +182,12 @@ class MoveGraph(object):
     def update(self, move, distance, max_v, max_a, end_t, frequency):
 
         self.plot.y_range.start = 0
-        self.plot.y_range.end = max_v
+        self.plot.y_range.end = max_v + 10
 
         self.plot.x_range.end = end_t
 
-        self.plot.extra_y_ranges["a"].start = -max_a - 100
-        self.plot.extra_y_ranges["a"].end = max_a + 100
+        self.plot.extra_y_ranges["a"].start = -max_a - 10
+        self.plot.extra_y_ranges["a"].end = max_a + 10
 
         self.plot.extra_y_ranges["x"].start = 0
         self.plot.extra_y_ranges["x"].end = distance + 10
@@ -183,6 +235,7 @@ class Instance(object):
         self.frequency = FloatInput(value=30, title="Frequency", on_update=self.on_update)
 
         self.trapezoidal_graph = MoveGraph(self.start_speed.value, self.end_speed.value)
+        self.smooth4_graph = MoveGraph(self.start_speed.value, self.end_speed.value)
 
         self.on_update()
 
@@ -194,7 +247,8 @@ class Instance(object):
                 self.max_a.widget,
                 self.max_v.widget,
                 self.frequency.widget,
-                self.trapezoidal_graph.plot
+                self.trapezoidal_graph.plot,
+                self.smooth4_graph.plot
             ]
         )
         doc.add_root(layout)
@@ -202,10 +256,13 @@ class Instance(object):
     def on_update(self):
         trapezoidal = Trapezoidal(self.start_speed.value, self.end_speed.value, self.distance.value,
                                   self.max_v.value, self.max_a.value)
+        smooth4 = SmoothStep4(self.start_speed.value, self.end_speed.value, self.distance.value,
+                              self.max_v.value, self.max_a.value)
         end_t = trapezoidal.t + 5.0 / self.frequency.value
         self.trapezoidal_graph.update(trapezoidal, self.distance.value, self.max_v.value,
                                       self.max_a.value, end_t, self.frequency.value)
-
+        self.smooth4_graph.update(smooth4, self.distance.value, self.max_v.value,
+                                  self.max_a.value, end_t, self.frequency.value)
 
 class PointToPointSimulator(object):
     def run_webserver(self):
