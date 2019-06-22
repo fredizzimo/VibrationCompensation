@@ -1,0 +1,2 @@
+jupyterlab-jupytext v0.1.0
+jupyterlab_vim v0.10.1
