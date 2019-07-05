@@ -13,7 +13,7 @@ colorcet = "1.0.1"
 
 [tool.poetry.dev-dependencies]
 sympy = "1.4"
-jupyter = "1.0.0"
+antlr4-python3-runtime = "4.7.2"
 jupyterlab = "0.35.6"
 jupytext = "1.1.6"
 pylint = "2.3.1"
