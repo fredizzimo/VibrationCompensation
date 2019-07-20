@@ -56,13 +56,34 @@ print_equation(s.a_t, r.a_t)
 v = s.v_s + sp.integrate(r.a_t, s.t)
 v = sp.simplify(v)
 r.v_t = v
+r.v_t = sp.Piecewise(
+    (s.v_s + s.a_max*s.t, s.t <= s.t_ta),
+    (s.v_c, s.t <= s.t_ta + s.t_tc),
+    (s.v_c - s.a_max * (s.t - s.t_ta - s.t_tc), s.t <= s.t_ta + s.t_tc + s.t_td),
+    (s.v_e, True)
+)
 print_equation(s.v_t, r.v_t)
 
+
+args = ((arg[0].expand().collect(s.t), arg[1]) for arg in r.v_t.args)
+r.v_t = sp.Piecewise(*args)
+display(r.v_t)
 
 x = sp.integrate(r.v_t, s.t)
 x = sp.simplify(x)
 r.x_t = x
+r.x_t = sp.Piecewise(
+    (s.v_s * s.t + (s.a_max * s.t**2) / 2, s.t <= s.t_ta),
+    (s.delta_xta + s.v_c * (s.t - s.t_ta), s.t <= s.t_ta + s.t_tc),
+    (s.delta_xta + s.delta_xtc + s.v_c * (s.t - s.t_ta - s.t_tc) - (s.a_max * (s.t - s.t_ta - s.t_tc)**2) / 2, s.t <= s.t_ta + s.t_tc + s.t_td),
+    (s.d + s.v_e * (s.t - s.t_ta - s.t_tc - s.t_td):w
+     , True)
+)
 print_equation(s.x_t, r.x_t)
+
+args = ((arg[0].expand().collect(s.t), arg[1]) for arg in r.x_t.args)
+r.x_t = sp.Piecewise(*args)
+display(r.x_t)
 
 # The time $t_{amax}$ it takes to accelerate from $v_{s}$ to $v_{e}$ with the maximum acceleration $a_{max}$
 
