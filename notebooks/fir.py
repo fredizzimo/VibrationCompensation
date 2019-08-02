@@ -14,6 +14,7 @@
 # ---
 
 import sympy as sp
+import sys
 
 # +
 s_t = sp.Symbol("t", nonnegative=True)
@@ -101,13 +102,13 @@ display(res)
 # -
 
 eq_v = sp.Eq(f_v(s_t), sp.Piecewise(
-    ((s_F * s_t**2) / (2 * s_T[1] * s_T[2]), s_t < s_T[2]),
-    ((s_F * s_T[2]) / (2 * s_T[1]) + (s_F / s_T[1])*(s_t - s_T[2]), s_t < s_T[1]),
-    (s_F - ((s_F * (s_T[1] + s_T[2] - s_t)**2)) / (2*s_T[1]*s_T[2]), s_t < s_T[1] + s_T[2]),
+    ((s_F * s_t**2) / (2 * s_T[0] * s_T[1]), s_t < s_T[1]),
+    ((s_F * s_T[1]) / (2 * s_T[0]) + (s_F / s_T[0])*(s_t - s_T[1]), s_t < s_T[0]),
+    (s_F - ((s_F * (s_T[0] + s_T[1] - s_t)**2)) / (2*s_T[0]*s_T[1]), s_t < s_T[0] + s_T[1]),
     (s_F, s_t < s_T_v),
-    (s_F - (s_F * (s_t - s_T_v)**2) / (2 * s_T[1] * s_T[2]), s_t < s_T_v + s_T[2]),
-    (s_F - (s_F * s_T[2]) / (2 * s_T[1]) - (s_F * (s_t - s_T_v - s_T[2])) / s_T[1], s_t < s_T_v + s_T[1]),
-    ((s_F * (s_T_v + s_T[1] + s_T[2] - s_t)**2) / (2 * s_T[1] * s_T[2]), s_t < s_T_v + s_T[1] + s_T[2]),
+    (s_F - (s_F * (s_t - s_T_v)**2) / (2 * s_T[0] * s_T[1]), s_t < s_T_v + s_T[1]),
+    (s_F - (s_F * s_T[1]) / (2 * s_T[0]) - (s_F * (s_t - s_T_v - s_T[1])) / s_T[0], s_t < s_T_v + s_T[0]),
+    ((s_F * (s_T_v + s_T[0] + s_T[1] - s_t)**2) / (2 * s_T[0] * s_T[1]), s_t < s_T_v + s_T[0] + s_T[1]),
     (0, True)
 ))
 display(eq_v)
@@ -115,27 +116,7 @@ display(eq_v)
 eq_a = sp.Eq(f_a(s_t), sp.diff(eq_v.rhs, s_t))
 display(eq_a)
 
-
-def integrate(f):
-    lower = 0
-    current = 0
-    res = []
-    for p in f.args:
-        if p[1] == True:
-            upper = s_t
-        else:
-            upper = sp.solve(p[1], s_t).args[1]
-        integ_res = sp.integrate(p[0], (s_t, 0, s_t)) 
-        integ_res = integ_res.simplify()
-        res.append((integ_res, p[1]))
-        #current = current + sp.integrate(p[0], (s_t, lower, upper)) 
-        lower = upper
-    return sp.Piecewise(*res)
-eq_s = sp.Eq(f_s(s_t), integrate(eq_v.rhs))
-display(eq_s)
-#sp.solve(eq_v.rhs.args[4][1], s_t)
-
-eq_f_s_i = [sp.Eq(f_s_i[i](s_t), sp.integrate(p[0], (s_t, 0, s_t)).simplify()) for i, p in enumerate(eq_v.rhs.args)]
+eq_f_s_i = [sp.Eq(f_s_i[i](s_t), sp.integrate(p[0], (s_t, 0, s_t)).expand().factor()) for i, p in enumerate(eq_v.rhs.args)]
 for eq in eq_f_s_i:
     display(eq)
 
@@ -163,3 +144,84 @@ def generate_s():
 eq_f_s = generate_s()
 
 display(eq_f_s)
+
+# -
+
+# Generate code for evaluating the trajectories
+
+# +
+# First convert to standard polynomials
+def convert_expr_to_poly(expr):
+    poly = sp.Poly(expr, s_t)
+    coeffs = poly.all_coeffs()
+    coeffs = [c.expand().factor() for c in coeffs] 
+    poly = sp.Poly(coeffs, s_t)
+    return poly.as_expr()
+
+def convert_to_polynomial(eq):
+    res = []
+    for p in eq.rhs.args:
+        res.append((convert_expr_to_poly(p[0]), p[1]))
+    return sp.Eq(eq.lhs, sp.Piecewise(*res))
+
+
+eq_v_polynomial = convert_to_polynomial(eq_v)
+eq_a_polynomial = convert_to_polynomial(eq_a)
+eq_f_s_i_polynomial = [sp.Eq(e.lhs, convert_expr_to_poly(e.rhs)) for e in eq_f_s_i]
+
+# We are interested in just the coefficents
+def get_coeffs(p, degree):
+    poly = sp.Poly(p, s_t)
+    poly_degree = poly.degree(s_t)
+    if poly_degree == -sp.oo:
+        poly_degree = 0
+    return ([0] * (degree - poly_degree)) + poly.all_coeffs()
+
+v_coeffs = sp.Matrix([get_coeffs(p[0], 2) for p in eq_v_polynomial.rhs.args])
+a_coeffs = sp.Matrix([get_coeffs(p[0], 1) for p in eq_a_polynomial.rhs.args])
+s_coeffs = sp.Matrix([get_coeffs(p.rhs, 3) for p in eq_f_s_i_polynomial])
+
+# The feedrate is always a factor, so remove it
+def divide_by_f(m):
+    res = m / s_F
+    return res.applyfunc(sp.factor)
+
+v_coeffs_without_f = divide_by_f(v_coeffs)
+a_coeffs_without_f = divide_by_f(a_coeffs)
+s_coeffs_without_f = divide_by_f(s_coeffs)
+
+# Then generate all common subexpressions that doesn't involve T_v, since that is also feedrate indepedent.
+# That way we only need to call these once
+def fixed_coefficients():
+    c = sp.IndexedBase("c")
+    for i in range(sys.maxsize):
+        yield c[i]
+
+fixed_coefficients = sp.cse([v_coeffs_without_f, a_coeffs_without_f, s_coeffs_without_f], ignore=(s_T_v,), symbols=fixed_coefficients())
+
+res = fixed_coefficients[1]
+res = [(r * s_F).applyfunc(sp.factor) for r in res]
+    
+# Extract all the remaining subexpressions, we have to re-calculate this everytime the speed changes
+feedrate_dependent_coefficients = sp.cse(res)
+
+# Print the result, so it can be copied
+for r in fixed_coefficients[0]:
+    print("c.append(%s)" % r[1])
+    
+for r in feedrate_dependent_coefficients[0]:
+    print("%s = %s" % r)
+    
+def assign_array(name, matrix):
+    l = matrix.tolist()
+    print("%s = [" % (name,))
+    for r in l:
+        print("    %s," % (r,))
+    print("]")
+
+assign_array("v_coeffs", feedrate_dependent_coefficients[1][0])
+assign_array("a_coeffs", feedrate_dependent_coefficients[1][1])
+assign_array("s_coeffs", feedrate_dependent_coefficients[1][2])
+# -
+
+
