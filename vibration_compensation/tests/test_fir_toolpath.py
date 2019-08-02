@@ -42,9 +42,15 @@ def test_straight_line(plotter):
             "G1 F100",
             "G1 X100 Y200"
         ]),
-        maximum_error=0.01)
+        maximum_acceleration=1000,
+        maximum_error=0.01,
+        filter_times=(0.1, 0))
     assert toolpath.xy.shape[0] == 1
     assert_array_almost_equal(toolpath.xy[0], (100, 200))
     assert toolpath.f[0] == pytest.approx(100)
+    assert toolpath.length[0] == pytest.approx(223.6, abs=0.1)
+    assert toolpath.pulse_length[0] == pytest.approx(2.2, abs=0.1)
+    assert toolpath.start_times[0] == pytest.approx(0)
+    assert toolpath.total_time == pytest.approx(2.3, abs=0.1)
     plotter(toolpath)
 
