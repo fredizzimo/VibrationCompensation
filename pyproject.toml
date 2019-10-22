@@ -6,7 +6,7 @@ authors = ["Fred Sundvik"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.6"
 scipy = "^1.2"
 bokeh = "^1.0"
 colorcet = "^1.0"
