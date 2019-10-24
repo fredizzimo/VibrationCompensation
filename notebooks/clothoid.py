@@ -20,11 +20,12 @@ import sympy as sym
 sym.init_printing()
 
 # %%
-k, k_0, c, s, th_0 = sym.symbols("kappa, kappa_0, c, s, theta_0")
+k, k_0, c, th_0 = sym.symbols("kappa, kappa_0, c, theta_0")
 T_hat, i_hat, j_hat = sym.symbols(r"\hat{T}, \hat{i}, \hat{j}")
 x_0, y_0, t = sym.symbols("x_0, y_0, t")
-v, v_x, v_y = sym.symbols("v, v_x, v_y")
-a, a_x, a_y = sym.symbols("a, a_x, a_y")
+s, s_0 = sym.symbols("s, s_0")
+v, v_0, v_x, v_y = sym.symbols("v, v_0, v_x, v_y")
+a, a_0, a_x, a_y = sym.symbols("a, a_0, a_x, a_y")
 j, j_x, j_y = sym.symbols("j, j_x, j_y")
 
 # %%
@@ -84,3 +85,18 @@ eq_j_y = sym.Eq(j_y,
     + c * v**3 * sym.cos(f_theta_s)
 )
 display(eq_j_x)
+
+# %%
+f_a_t = sym.Function("a")(t)
+eq_a_t = sym.Eq(f_a_t, a_0 + j * t)
+display(eq_a_t)
+
+# %%
+f_v_t = sym.Function("v")(t)
+eq_v_t = sym.Eq(f_v_t, v_0 + sym.integrate(eq_a_t.rhs, t))
+display(eq_v_t)
+
+# %%
+f_s_t = sym.Function("s")(t)
+eq_s_t = sym.Eq(f_s_t, s_0 + sym.integrate(eq_v_t.rhs, t))
+display(eq_s_t)
