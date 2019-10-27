@@ -140,13 +140,52 @@ def draw_system():
     draw_arrow((hotend_middle_x, belt_top_y + 10), 30, "y", True)
     draw_arrow((hotend_pos[0] + hotend_size[0], hotend_pos[1] + hotend_size[1] / 2), 30, "F")
     
+    def draw_wall(pos, height):
+        step = 10
+        width = 10
+        y = pos[1]
+        canvas.begin_path()
+        canvas.move_to(pos[0], pos[1])
+        while y <= height:
+            y += step
+            canvas.line_to(pos[0] - width, y - 2 * step)
+            canvas.move_to(pos[0], y)
+        canvas.stroke()
+    
+    draw_wall((stepper_pos[0], stepper_pos[1]), stepper_size[1])
+    
     return canvas
 draw_system()
+
+# %%
+s = sym.symbols("s")
+f_g_i_s = sym.Function("G_i")(s)
+f_x_i_s = sym.Function("X")(s)
+f_y_i_s = sym.Function("Y")(s)
+eq_g_i_s = sym.Eq(f_g_i_s, f_x_i_s / f_y_i_s)
+display(eq_g_i_s)
+
+# %%
+x, y, k, c, m, t = sym.symbols("x, y, k, c, m, t")
+eq_spring = sym.Eq(-(y-x)*k - c*(sym.Derivative(y, t) - sym.Derivative(x, t)), m * (sym.Derivative(y, (t,2))-sym.Derivative(x, (t,2))))
+display(eq_spring)
+display(sym.laplace_transform(eq_spring.lhs - eq_spring.rhs, s, t))
+
+# %%
+eq_spring = sym.Eq(-(x)*k - c*(sym.Derivative(x, t)), m * (sym.Derivative(x, (t,2))))
+display(eq_spring)
+display(sym.laplace_transform(eq_spring.lhs - eq_spring.rhs, t, s))
 
 # %%
 s, w_n, z = sym.symbols("s, omega_n, zeta")
 f_g_i_s = sym.Function("G_i")(s)
 eq_g_i_s = sym.Eq(f_g_i_s, (w_n ** 2) / (s**2 + 2*z*w_n*s + w_n**2))
 display(eq_g_i_s)
+
+# %%
+test_f = sym.Function("f")(t)
+test = sym.Derivative(test_f, t)
+display(test)
+display(sym.laplace_transform(test, t, s))
 
 # %%
