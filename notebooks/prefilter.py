@@ -167,9 +167,20 @@ display(eq_g_i_s)
 
 # %%
 x, y, k, c, m, t = sym.symbols("x, y, k, c, m, t")
-eq_spring = sym.Eq(-(y-x)*k - c*(sym.Derivative(y, t) - sym.Derivative(x, t)), m * (sym.Derivative(y, (t,2))-sym.Derivative(x, (t,2))))
+f_y_t = sym.Function("y")(t)
+f_x_t = sym.Function("x")(t)
+eq_spring = sym.Eq((f_y_t-f_x_t)*k + c*(sym.Derivative(f_y_t, t) - sym.Derivative(f_x_t, t)), m * (sym.Derivative(f_y_t, (t,2))))
 display(eq_spring)
-display(sym.laplace_transform(eq_spring.lhs - eq_spring.rhs, s, t))
+eq_spring = sym.Eq(k*f_y_t + c*(sym.Derivative(f_y_t, t)) - m * (sym.Derivative(f_y_t, (t,2))), k*f_x_t + c*sym.Derivative(f_x_t, t))
+display(eq_spring)
+
+# %%
+eq_spring_s = sym.Eq(k*f_y_i_s + c*s*f_y_i_s - m*s**2*f_y_i_s, k*f_x_i_s + c*s*f_x_i_s)
+display(eq_spring_s)
+
+# %%
+eq_spring_g = sym.Eq(f_g_i_s, (eq_spring_s.lhs / f_y_i_s).simplify() / (eq_spring_s.rhs / f_x_i_s).simplify())
+display(eq_spring_g)
 
 # %%
 eq_spring = sym.Eq(-(x)*k - c*(sym.Derivative(x, t)), m * (sym.Derivative(x, (t,2))))
