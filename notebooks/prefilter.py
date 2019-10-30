@@ -15,8 +15,10 @@
 
 # %%
 import sympy as sym
+import numpy as np
 from ipycanvas import Canvas
 from math import pi
+import plotly.graph_objects as go
 
 # %%
 sym.init_printing()
@@ -188,9 +190,10 @@ display(eq_spring)
 display(sym.laplace_transform(eq_spring.lhs - eq_spring.rhs, t, s))
 
 # %%
-s, w_n, z = sym.symbols("s, omega_n, zeta")
+s = sym.symbols("s")
+w_n, z_n = sym.symbols("omega_n, zeta_n", positive=True)
 f_g_i_s = sym.Function("G_i")(s)
-eq_g_i_s = sym.Eq(f_g_i_s, (w_n ** 2) / (s**2 + 2*z*w_n*s + w_n**2))
+eq_g_i_s = sym.Eq(f_g_i_s, (2*z_n*w_n*s + w_n**2) / (s**2 + 2*z_n*w_n*s + w_n**2))
 display(eq_g_i_s)
 
 # %%
@@ -200,3 +203,36 @@ display(test)
 display(sym.laplace_transform(test, t, s))
 
 # %%
+t = sym.symbols("t", nonnegative=True)
+display(sym.inverse_laplace_transform(eq_g_i_s.rhs, s, t).simplify())
+
+
+# %%
+def frequency_response(frequency, damping_ratio, sample_rate, window_length):
+    w_0 = frequency * (2.0 * np.pi)
+    z = damping_ratio
+    w = np.fft.fftfreq(window_length, sample_rate) * 2.0 * np.pi
+    s = 1j*w
+    w2_2_w_0_s_z = w_0**2 + 2.0*w_0*z * s
+    numerator = w2_2_w_0_s_z
+    denominator = w2_2_w_0_s_z + s**2
+    return w / (2.0 * np.pi) , numerator / denominator
+    
+def plot_frequency_response(w, f):
+    shifted_w = np.fft.fftshift(w)
+    shifted_f = np.fft.fftshift(f)
+    fig = go.Figure(data=go.Scatter(x=shifted_w, y=np.abs(shifted_f)))
+    fig.show()
+
+def plot_time_response(w, f):
+    v = np.fft.ifft(f)
+    fig = go.Figure(data=go.Scatter(x=w, y=np.real(v)))
+    fig.show()
+    
+
+def plot_response(frequency, damping_ratio, sample_rate, window_length):
+    w, f = frequency_response(frequency, damping_ratio, sample_rate, window_length)
+    plot_frequency_response(w, f)
+    plot_time_response(np.linspace(0, sample_rate*window_length, window_length), f)
+    
+plot_response(100, 0.1, 0.0001, 10000)
