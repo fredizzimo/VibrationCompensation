@@ -18,6 +18,7 @@ import sympy as sym
 import numpy as np
 import scipy as sp
 import scipy.signal as signal
+import scipy.interpolate as interpolate
 from ipycanvas import Canvas
 from math import pi
 import plotly.graph_objects as go
@@ -250,4 +251,23 @@ plot_bode(system)
 plot_impulse(system)
 plot_step(system, 100000)
 
+
 # %%
+def plot_response(system, u, t, name=""):
+    _, y, _= signal.lsim(system, u, t)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=u, name="input"))
+    fig.add_trace(go.Scatter(x=t, y=y, name="output"))
+    fig.add_trace(go.Scatter(x=t, y=y-u, name="error"))
+    fig.update_xaxes(title="Time (s)")
+    fig.update_layout(title=name)
+    fig.show()
+    
+def generate_curve(*points, num=1000):
+    points = np.array([*points])
+    interpolator = interpolate.interp1d(points[:,1], points[:,0])
+    t = np.linspace(points[0,1], points[-1,1], num)
+    v = interpolator(t)
+    return v, t
+    
+plot_response(system, *generate_curve((0,0), (5, 0.1), (5, 1)), "Fixed speed, then stop")
