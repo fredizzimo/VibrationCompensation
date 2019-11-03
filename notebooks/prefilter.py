@@ -394,9 +394,8 @@ def create_prefilter(system, frequency, damping, t0, t1, N):
     M = np.array([
         np.ones(k.shape[0]),
         k0kdt,
-        #TODO: There's a precision loss for these two multiplications
-        (k0k)**2*dt**2,
-        (k0k)**3*dt**3,
+        k0kdt**2,
+        k0kdt**3,
         zrv0*np.cos(zrv1),
         zrv0*np.sin(zrv1)
     ])
@@ -419,17 +418,18 @@ def create_prefilter(system, frequency, damping, t0, t1, N):
        0
     ])
     res = np.linalg.lstsq(M, d, rcond=-1)
-    print(M@res[0])
     err = np.abs(M@res[0]-d)
+    print(err)
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=k0kdt, y=res[0]))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[0], name="m0"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[1], name="m1"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[2], name="m2"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[3], name="m3"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[4], name="zrv1"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=M[5], name="zrv2"))
-    fig.add_trace(go.Scatter(x=k0kdt, y=err, name="err"))
+    if False:
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[0], name="m0"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[1], name="m1"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[2], name="m2"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[3], name="m3"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[4], name="zrv1"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=M[5], name="zrv2"))
+        fig.add_trace(go.Scatter(x=k0kdt, y=err, name="err"))
     fig.show()
     
-create_prefilter(create_system(8.23, 0.006), 8.23, 0.006, 0, 0.2, 5000)
+create_prefilter(system, 30, 0.1, -0.03, 0.03, 5000)
