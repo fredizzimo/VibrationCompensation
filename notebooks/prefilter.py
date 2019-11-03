@@ -21,6 +21,7 @@ import scipy.signal as signal
 import scipy.interpolate as interpolate
 from ipycanvas import Canvas
 from math import pi
+import math
 import plotly.graph_objects as go
 
 # %%
@@ -267,8 +268,8 @@ display(eq_convolve_ref_disc)
 
 # %%
 f_m = sym.Function(r"\mathbf{m}")
-d = sym.symbols(r"\mathbf{d}")
-eq_constraints_disc = sym.Eq(sym.Sum(f_m(k)*f_h(k*T), (k, k_0, k_1)), d)
+d = sym.MatrixSymbol(r"\mathbf{d}", 1, 6)
+eq_constraints_disc = sym.Eq(sym.Sum(f_m(k)*f_h(k*T), (k, k_0, k_1)), d, evaluate=False)
 display(eq_constraints_disc)
 
 # %%
@@ -294,12 +295,14 @@ eq_d = sym.Eq(d, sym.Matrix([
 display(eq_d)
 
 # %%
-M,h = sym.symbols(r"\mathbf{M}, \mathbf{h}")
-eq_constraints_matrix = sym.Eq(M*h, d)
+M=sym.MatrixSymbol(r"\mathbf{M}", 1, 6)
+h=sym.MatrixSymbol(r"\mathbf{h}", 6, 1)
+eq_constraints_matrix = sym.Eq(M*h, d, evaluate=False)
 display(eq_constraints_matrix)
 
 # %%
-eq_h = sym.Eq(h, )
+eq_minimum_norm = sym.Eq(h, M.T*(M*M.T).inv()*d, evaluate=False)
+display(eq_minimum_norm)
 
 
 # %%
@@ -373,3 +376,50 @@ def generate_curve(*points, num=1000):
     return v, t
     
 plot_response(system, *generate_curve((0,0), (5, 0.1), (5, 1)), "Fixed speed, then stop")
+
+
+# %%
+def create_prefilter(system, frequency, damping, t0, t1, N):
+    times = np.linspace(t0, t1, N)
+    dt = (t1 - t0) / (N-1)
+    k1 = math.ceil(t1 / dt)
+    k0 = math.ceil(t0 / dt)
+    k = np.arange(0, N, 1)
+    k0k = k0 + k
+    k0kdt = k0k*dt
+    w = frequency * (2.0 * np.pi)
+    z = damping
+    zrv0 = np.e**(z*w*k0kdt)
+    zrv1 = k0kdt*w*math.sqrt(1-z**2)
+    M = np.array([
+        np.ones(k.shape[0]),
+        (k0k)*dt,
+        (k0k)**2*dt**2,
+        (k0k)**3*dt**3,
+        zrv0*np.cos(zrv1),
+        zrv0*np.sin(zrv1)
+    ])
+    def make_3rddegree_poly(v):
+        v = np.flip(v)
+        return np.pad(v, ((0,4 - v.shape[0])), mode="constant", constant_values=(0, 0))
+    
+    a = make_3rddegree_poly(system.den)
+    b = make_3rddegree_poly(system.num)
+    M0 = a[0] / b[0]
+    M1 = (-1.0 / b[0])*(a[1] - b[1]*M0)
+    M2 = (2.0 / b[0])*(a[2]-b[2]*M0 + b[1]*M1)
+    M3 = (-3.0 / b[0])*(2*a[3] - 2*b[3]*M0 + 2*b[2]*M1 - b[1]*M2)
+    d = np.array([
+       M0,
+       M1,
+       M2,
+       M3,
+       0,
+       0
+    ])
+    res = np.linalg.lstsq(M, d, rcond=None)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=k0kdt, y=res[0]))
+    fig.show()
+    
+create_prefilter(create_system(8.23, 0.006), 8.23, 0.006, 0, 0.2, 200)
