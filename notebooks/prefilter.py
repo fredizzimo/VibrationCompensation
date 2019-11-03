@@ -16,6 +16,8 @@
 # %%
 import sympy as sym
 import numpy as np
+import scipy as sp
+import scipy.signal as signal
 from ipycanvas import Canvas
 from math import pi
 import plotly.graph_objects as go
@@ -196,43 +198,56 @@ f_g_i_s = sym.Function("G_i")(s)
 eq_g_i_s = sym.Eq(f_g_i_s, (2*z_n*w_n*s + w_n**2) / (s**2 + 2*z_n*w_n*s + w_n**2))
 display(eq_g_i_s)
 
-# %%
-test_f = sym.Function("f")(t)
-test = sym.Derivative(test_f, t)
-display(test)
-display(sym.laplace_transform(test, t, s))
 
 # %%
-t = sym.symbols("t", nonnegative=True)
-display(sym.inverse_laplace_transform(eq_g_i_s.rhs, s, t).simplify())
-
-
-# %%
-def frequency_response(frequency, damping_ratio, sample_rate, window_length):
+def create_system(frequency, damping):
     w_0 = frequency * (2.0 * np.pi)
-    z = damping_ratio
-    w = np.fft.fftfreq(window_length, sample_rate) * 2.0 * np.pi
-    s = 1j*w
-    w2_2_w_0_s_z = w_0**2 + 2.0*w_0*z * s
-    numerator = w2_2_w_0_s_z
-    denominator = w2_2_w_0_s_z + s**2
-    return w / (2.0 * np.pi) , numerator / denominator
-    
-def plot_frequency_response(w, f):
-    shifted_w = np.fft.fftshift(w)
-    shifted_f = np.fft.fftshift(f)
-    fig = go.Figure(data=go.Scatter(x=shifted_w, y=np.abs(shifted_f)))
+    z = damping
+    return sp.signal.TransferFunction([2*w_0*z, w_0**2], [1, 2*w_0*z, w_0**2])
+
+
+# %%
+def plot_bode(system, n=1000):
+    w, mag, phase = signal.bode(system, n)
+    freq = w / (2.0 * np.pi)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=freq, y=mag))
+    fig.update_layout(title="Bode Amplitude", xaxis_type="log")
+    fig.update_xaxes(title="Frequency (Hz)")
+    fig.update_yaxes(title="Amplitude (db)")
+    fig.show()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=freq, y=phase))
+    fig.update_layout(title="Bode Phase", xaxis_type="log")
+    fig.update_xaxes(title="Frequency (Hz)")
+    fig.update_yaxes(title="Phase (degrees)")
     fig.show()
 
-def plot_time_response(w, f):
-    v = np.fft.ifft(f)
-    fig = go.Figure(data=go.Scatter(x=w, y=np.real(v)))
-    fig.show()
-    
 
-def plot_response(frequency, damping_ratio, sample_rate, window_length):
-    w, f = frequency_response(frequency, damping_ratio, sample_rate, window_length)
-    plot_frequency_response(w, f)
-    plot_time_response(np.linspace(0, sample_rate*window_length, window_length), f)
-    
-plot_response(100, 0.1, 0.0001, 10000)
+# %%
+def plot_impulse(system, n=1000):
+    t, y= signal.impulse(system, N=n)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=y))
+    fig.update_xaxes(title="Time (s)")
+    fig.update_layout(title="Impulse response")
+    fig.show()
+
+
+# %%
+def plot_step(system, n=1000):
+    t, y= signal.step(system, N=n)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=y))
+    fig.update_xaxes(title="Time (s)")
+    fig.update_layout(title="Step response")
+    fig.show()
+
+
+# %%
+system = create_system(30, 0.1)
+plot_bode(system)
+plot_impulse(system)
+plot_step(system, 100000)
+
+# %%
