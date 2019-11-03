@@ -253,6 +253,54 @@ def calculate_m():
     return M
 eq_m_i = calculate_m()
 
+# %%
+eq_zrv_0 = sym.Eq(sym.Integral(f_h(t)*sym.exp(z_n*w_n*t)*sym.cos(t*w_n*sym.sqrt(1-z_n**2)), t))
+eq_zrv_1 = eq_zrv_0.replace(sym.cos, sym.sin)
+display(eq_zrv_0)
+display(eq_zrv_1)
+
+# %%
+T = sym.symbols("T")
+k_0, k_1 = sym.symbols("k_0, k_1")
+eq_convolve_ref_disc = sym.Eq(f_p_star_r(m*T),T*sym.Sum(f_h(k*t)*f_p_r((m-k)*T), (k,k_0, k_1)))
+display(eq_convolve_ref_disc)
+
+# %%
+f_m = sym.Function(r"\mathbf{m}")
+d = sym.symbols(r"\mathbf{d}")
+eq_constraints_disc = sym.Eq(sym.Sum(f_m(k)*f_h(k*T), (k, k_0, k_1)), d)
+display(eq_constraints_disc)
+
+# %%
+eq_m_k = sym.Eq(f_m(k), sym.Matrix([
+    1,
+    k*T,
+    k**2*T**2,
+    k**3*T**3,
+    sym.exp(z_n*w_n*k*T)*sym.cos(k*T*w_n*sym.sqrt(1-z_n**2)),
+    sym.exp(z_n*w_n*k*T)*sym.cos(k*T*t*w_n*sym.sqrt(1-z_n**2))]),
+    evaluate=False)
+display(eq_m_k)
+
+# %%
+eq_d = sym.Eq(d, sym.Matrix([
+    eq_m_i[0].args[0],
+    eq_m_i[1].args[0],
+    eq_m_i[2].args[0],
+    eq_m_i[3].args[0],
+    0,
+    0
+    ]), evaluate=False)
+display(eq_d)
+
+# %%
+M,h = sym.symbols(r"\mathbf{M}, \mathbf{h}")
+eq_constraints_matrix = sym.Eq(M*h, d)
+display(eq_constraints_matrix)
+
+# %%
+eq_h = sym.Eq(h, )
+
 
 # %%
 def create_system(frequency, damping):
