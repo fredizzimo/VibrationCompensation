@@ -199,6 +199,60 @@ f_g_i_s = sym.Function("G_i")(s)
 eq_g_i_s = sym.Eq(f_g_i_s, (2*z_n*w_n*s + w_n**2) / (s**2 + 2*z_n*w_n*s + w_n**2))
 display(eq_g_i_s)
 
+# %%
+g = sym.symbols("G")
+f_a_s = sym.Function("a")(s)
+f_b_s = sym.Function("b")(s)
+eq_g = sym.Eq(g, f_b_s / f_a_s)
+display(eq_g)
+
+# %%
+alpha_n = sym.IndexedBase("alpha")
+beta_n = sym.IndexedBase("beta")
+N, n = sym.symbols("N, n", integer=True, nonnegative=True)
+eq_a_s = sym.Eq(f_a_s, sym.Sum(s**n * alpha_n[n], (n, 0, N)))
+eq_b_s = eq_a_s.subs(f_a_s, f_b_s).subs(alpha_n, beta_n)
+display(eq_a_s)
+display(eq_b_s)
+
+# %%
+e = sym.symbols("e")
+p, p_r, p_star_r = sym.symbols("p, p_r, {p_r}^*")
+eq_e = sym.Eq(sym.Eq(e, p_r - p), p_r - eq_g.rhs * p_star_r, evaluate=False)
+display(eq_e)
+
+# %%
+tau = sym.symbols("tau")
+f_p_star_r = sym.Function("{p_r}^*")
+f_p_star_r_t = f_p_star_r(t)
+f_h = sym.Function("h")
+f_p_r = sym.Function("p_r")
+t0, t1 = sym.symbols("t_0, t_1")
+eq_convolve_ref = sym.Eq(f_p_star_r_t, sym.Integral(f_h(tau)*f_p_r(t-tau), (tau, t0, t1)), evaluate=False)
+display(eq_convolve_ref)
+
+# %%
+j = sym.symbols("j")
+eq_constraints = sym.Eq(alpha_n[k] - sym.Sum(beta_n[k-j]*sym.Integral(f_h(tau)*tau**j, tau)*((-1)**j)/sym.factorial(j), (j, 0, k)))
+display(eq_constraints)
+
+
+# %%
+def calculate_m():
+    M = []
+    for i in range(4):
+        m_i = sym.symbols("M_%d" % i)
+        integral = sym.Integral(f_h(tau)*tau**i, tau)
+        substituted = eq_constraints.subs(k, i).doit()
+        for j in range(i):
+            substituted = substituted.subs(M[j].args[1].args[0], M[j].args[0])
+        solved = sym.solve(substituted, integral)[0]
+        eq = sym.Eq(m_i, sym.Eq(integral, solved))
+        M.append(eq)
+        display(eq)
+    return M
+eq_m_i = calculate_m()
+
 
 # %%
 def create_system(frequency, damping):
