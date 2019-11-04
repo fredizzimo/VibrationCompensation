@@ -435,5 +435,28 @@ def create_prefilter(system, t0, t1, N):
         fig.add_trace(go.Scatter(x=k0kdt, y=M[5], name="zrv2"))
         fig.add_trace(go.Scatter(x=k0kdt, y=err, name="err"))
     fig.show()
+    return res[0]
     
-create_prefilter(system, -0.03, 0.03, 5000)
+prefilter = create_prefilter(system, -1.0/120, 1.0/120, 2000)
+
+
+# %%
+def plot_prefilter(system, prefilter, u, t, name=""):
+    print(prefilter.shape)
+    print(u.shape)
+    y = signal.convolve(u, prefilter, mode="same")
+    print(y.shape)
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=u, name="input"))
+    fig.add_trace(go.Scatter(x=t, y=y, name="prefiltered"))
+    _, y, _= signal.lsim(system, y, t)
+    #fig = go.Figure()
+    fig.add_trace(go.Scatter(x=t, y=y, name="output"))
+    fig.add_trace(go.Scatter(x=t, y=y-u, name="error"))
+    #fig.add_trace(go.Scatter(x=t, y=y-u, name="error"))
+    fig.update_xaxes(title="Time (s)")
+    fig.update_layout(title=name)
+    fig.show()
+
+plot_prefilter(system, prefilter, *generate_curve((0,0), (5, 0.1), (5, 1), num=120*1000), "Fixed speed, then stop")
