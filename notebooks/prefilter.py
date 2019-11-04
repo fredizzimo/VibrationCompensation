@@ -309,7 +309,11 @@ display(eq_minimum_norm)
 def create_system(frequency, damping):
     w_0 = frequency * (2.0 * np.pi)
     z = damping
-    return sp.signal.TransferFunction([2*w_0*z, w_0**2], [1, 2*w_0*z, w_0**2])
+    ret = sp.signal.TransferFunction([2*w_0*z, w_0**2], [1, 2*w_0*z, w_0**2])
+    ret.frequency = frequency
+    ret.damping = damping
+    ret.frequency_radians = w_0
+    return ret
 
 
 # %%
@@ -379,7 +383,7 @@ plot_response(system, *generate_curve((0,0), (5, 0.1), (5, 1)), "Fixed speed, th
 
 
 # %%
-def create_prefilter(system, frequency, damping, t0, t1, N):
+def create_prefilter(system, t0, t1, N):
     times = np.linspace(t0, t1, N)
     dt = (t1 - t0) / (N-1)
     k1 = math.ceil(t1 / dt)
@@ -387,8 +391,8 @@ def create_prefilter(system, frequency, damping, t0, t1, N):
     k = np.arange(0, N, 1)
     k0k = k0 + k
     k0kdt = k0k*dt
-    w = frequency * (2.0 * np.pi)
-    z = damping
+    w = system.frequency_radians
+    z = system.damping
     zrv0 = np.e**(z*w*k0kdt)
     zrv1 = k0kdt*w*math.sqrt(1-z**2)
     M = np.array([
@@ -432,4 +436,4 @@ def create_prefilter(system, frequency, damping, t0, t1, N):
         fig.add_trace(go.Scatter(x=k0kdt, y=err, name="err"))
     fig.show()
     
-create_prefilter(system, 30, 0.1, -0.03, 0.03, 5000)
+create_prefilter(system, -0.03, 0.03, 5000)
