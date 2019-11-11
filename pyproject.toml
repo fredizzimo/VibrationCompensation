@@ -14,7 +14,7 @@ plotly = "4.2.1"
 ipycanvas = "0.3.4"
 PyWavelets = "1.1.1"
 # The latest is not compatible with jupyter
-pywin32 = "225"
+pywin32 = {version="225", platform="win32"}
 
 [tool.poetry.dev-dependencies]
 sympy = "1.4"
