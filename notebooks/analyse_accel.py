@@ -17,6 +17,7 @@
 import numpy as np
 import numpy.linalg as npl
 import plotly.graph_objects as go
+import pywt
 
 # %%
 res = np.loadtxt("../data/2019-04-0619.56.55.csv.txt", delimiter=",", skiprows=1)
@@ -54,50 +55,38 @@ fig.add_trace(go.Scatter(x=time, y=aT))
 fig.show()
 
 # %%
-dt = time[1:] - time[:-1]
-print(dt)
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=np.array(range(dt.shape[0])), y=dt))
-fig.show()
+idx = np.where((time > 63) & (time < 64.5))
+print(time[idx][0])
+print(time[idx][1])
+time_fa = time[idx] - time[idx][0]
+ax_fa = ax[idx]
+ay_fa = ay[idx]
+az_fa = az[idx]
+aT_fa = aT[idx]
 
 # %%
-T = 0.001
-n = (time / T).astype(np.int)
-print(n[:10])
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=time_fa, y=ax_fa))
+fig.add_trace(go.Scatter(x=time_fa, y=ay_fa))
+fig.add_trace(go.Scatter(x=time_fa, y=az_fa))
+fig.add_trace(go.Scatter(x=time_fa, y=aT_fa))
+fig.show()
 
-def reconstruct(time, values, step):
-    print(time[0])
-    print(time[-1])
-    sample_points = np.arange(time[0], time[-1], step=step)
-    print(sample_points)
 
-    A = np.tile(-sample_points[1:], (time.shape[0], 1))
-    A = A + time[:,np.newaxis]
-    print(A.shape)
-    with np.printoptions(precision=3, suppress=True):
-        print(A)
-    A = A / step
-    A = np.sinc(A)
-    #res = np.zeros(time.shape[0])
-    res = npl.lstsq(A, values, rcond=None)[0]
-    print(res.shape)
-    
-    resampled_times = np.arange(time[0], time[-1], step=0.0001)
-    def eval(t):
-        sum = 0
-        n = 0
-        for i in res:
-            sum += i*np.sinc((t-step*n)/step)
-            n+=1
-        return sum
-    resampled_values = [eval(t) for t in resampled_times]
+# %%
+def generate_equally_sampled_signal(time, signal):
+    time = np.array(np.round(time * 1000), dtype=np.int)
+    nogap = np.arange(time[0], time[-1] + 1, 1)
+    existing_times = np.isin(nogap, time, assume_unique=True)
+    nonexisting_times = ~existing_times
+    full_signal = np.zeros(nogap.shape[0])
+    full_signal[existing_times] = signal
+    signal = full_signal
+    time = nogap 
+    coeffs = pywt.wavedec(signal, 'db1', level=8, mode="zero")
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=sample_points, y=res))
-    fig.add_trace(go.Scatter(x=time, y=values))
-    fig.add_trace(go.Scatter(x=resampled_times, y=resampled_values))
+    fig.add_trace(go.Scatter(x=nogap, y=full_signal))
+    for c in coeffs[1:]:
+        fig.add_trace(go.Scatter(x=nogap, y=c))
     fig.show()
-
-reconstruct(time[:100], ay[:100], 0.003)
-#A = np.add(ay, sample_points)
-#print(a.shape)
-
+generate_equally_sampled_signal(time_fa, ay_fa)
