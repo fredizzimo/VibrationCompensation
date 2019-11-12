@@ -20,6 +20,7 @@ import plotly.graph_objects as go
 import pywt
 import scipy.fftpack as fftpack
 import scipy.signal as signal
+import math
 
 # %%
 res = np.loadtxt("../data/2019-04-0619.56.55.csv.txt", delimiter=",", skiprows=1)
@@ -56,15 +57,16 @@ fig.add_trace(go.Scatter(x=time, y=aT))
 #fig.add_trace(go.Scatter(x=time_o, y=aT_o))
 fig.show()
 
+
 # %%
-idx = np.where((time > 63) & (time < 64.5))
-print(time[idx][0])
-print(time[idx][1])
-time_fa = time[idx] - time[idx][0]
-ax_fa = ax[idx]
-ay_fa = ay[idx]
-az_fa = az[idx]
-aT_fa = aT[idx]
+def extract_time(start, end):
+    idx = np.where((time > start) & (time < end))
+    ret_time = time[idx] - time[idx][0]
+    return ret_time, ax[idx], ay[idx], az[idx], aT[idx]
+
+
+# %%
+time_fa, ax_fa, ay_fa,  az_fa, aT_fa = extract_time(63, 64.5)
 
 # %%
 fig = go.Figure()
@@ -97,6 +99,10 @@ def cleanup_signal(time, signal):
     num_nonexisting = np.sum(nonexisting_times)
     full_signal = np.zeros(nogap.shape[0])
     full_signal[existing_times] = signal
+    
+    print(full_signal.shape)
+    print(signal.shape)
+    print(signal.shape[0] / full_signal.shape[0])
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time, y=signal))
@@ -145,26 +151,59 @@ def cleanup_signal(time, signal):
     np.fill_diagonal(D, 1)
     D = fftpack.fft(D, axis=1)
     
-    for _ in range(20):
+    original_delta = delta
+    
+    if False:
+        for i in range(30):
+            scaled_delta = delta*D[nonexisting_times]
+            for _ in range(30):
+                Y = fftpack.fft(y)
+                g = np.sum(np.abs(Y + scaled_delta)[:, 100:800], axis=1)
+                g -= np.sum(np.abs(Y - scaled_delta)[:,100:800], axis=1)
+                g /= N
+                y[nonexisting_times] -= 2 * delta * g
+            delta = delta / np.sqrt(10)
+            #delta /= 2.0
+
+        delta = original_delta / 10
+        
+    prev_g = None
+    alpha_limit = math.radians(170)
+    delta = delta / 3
+    for i in range(10):
         scaled_delta = delta*D[nonexisting_times]
-        for _ in range(5):
-            Y = fftpack.fft(y)
+        Y = fftpack.fft(y)
+        plot_fft(Y)
+        prev_g = None
+        for j in range(10000):
             g = np.sum(np.abs(Y + scaled_delta), axis=1)
             g -= np.sum(np.abs(Y - scaled_delta), axis=1)
             g /= N
             y[nonexisting_times] -= g
+            Y = fftpack.fft(y)
+            if prev_g is not None:
+                a = np.sum(g * prev_g)
+                b = np.sqrt(np.sum(prev_g**2))
+                b *= np.sqrt(np.sum(g**2))
+                try:
+                    alpha = math.acos(a/b)
+                    if abs(alpha) > alpha_limit:
+                        break
+                except:
+                    break
+            prev_g = g
         delta = delta / np.sqrt(10)
-        #delta /= 2.0
     
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=time, y=signal))
     fig.add_trace(go.Scatter(x=nogap, y=y))
     fig.show()
-    #plot_fft(Y)
+    plot_fft(Y)
     
-    
-cleanup_signal(time_fa, ay_fa - 0.4)
+t, _, y,  _, _fa = extract_time(63.9, 64.5)
+cleanup_signal(t, y - 0.4)
 
 # %%
+print(fftpack.fftfreq(70, 1.0/1000))
 
 # %%
