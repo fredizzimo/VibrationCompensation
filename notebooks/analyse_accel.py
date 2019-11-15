@@ -20,6 +20,8 @@ import plotly.graph_objects as go
 import pywt
 import scipy.fftpack as fftpack
 import scipy.signal as signal
+import padasip as sip
+import simdkalman as kalman
 import math
 
 # %%
@@ -206,4 +208,74 @@ cleanup_signal(t, y - 0.4)
 # %%
 print(fftpack.fftfreq(70, 1.0/1000))
 
+
 # %%
+def find_signal(time, signal):
+    # The degree of the output
+    n = 2
+    
+    time = np.array(np.round(time * 1000), dtype=np.int)
+    nogap = np.arange(time[0], time[-1] + 1, 1)
+    existing_times = np.isin(nogap, time, assume_unique=True)
+    nonexisting_times = ~existing_times
+    num_nonexisting = np.sum(nonexisting_times)
+    full_signal = np.zeros(nogap.shape[0])
+    full_signal[existing_times] = signal
+    
+    acceltime = 150 / 3000
+    acceldist = 0.5 * 3000 * acceltime**2
+    deceldist = 150*acceltime - acceldist
+    print(150*acceltime)
+    print(3.75*2)
+    cruisedist = 40 - acceldist - deceldist
+    cruisetime = cruisedist / 150
+    print(acceldist)
+    print(deceldist)
+    acceltime_ms = int(acceltime * 1000)
+    cruisetime_ms = int(cruisetime * 1000)
+    print(acceltime)
+    start = 332
+    
+    u = np.concatenate((
+        np.zeros(start),
+        3*np.ones(acceltime_ms),
+        np.zeros(cruisetime_ms),
+        -3*np.ones(acceltime_ms),
+        np.zeros(nogap.shape[0] - (start + acceltime_ms+cruisetime_ms+acceltime_ms)),
+        # To support negative indexing
+        np.zeros(n)
+    ))
+    
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=signal))
+    fig.add_trace(go.Scatter(x=nogap, y=u))
+    fig.show()
+    
+    
+    # The paper uses 1 based indexing
+    t = 0
+    s = -1
+    ts = -1
+    p0 = 10e6
+    a_hat_t0 = np.ones(n) / p0
+    b0_hat_t0 = np.ones(n+1) / p0
+    theta_t0 = np.concatenate((a_hat_t0, b0_hat_t0))
+    # This should probably be for <=0, the paper uses <=1
+    x_hat_i = np.ones(n) / p0
+    P1_t0 = p0*np.identity(2*n+1)
+    P2_1 = p0*np.identity(n)
+    rls = sip.filters.FilterRLS(n=1, mu=1, w="random")
+    #TODO use the same wrap around trick for xhat
+    phi = np.concatenate((x_hat_i, [u[t-i] for i in range(n+1)]))
+    print(P1_t0)
+    print(phi)
+    if (existing_times[t]):
+        s += 1
+        ts = t
+        print(rls.run(theta_t0, (full_signal[t],)))
+    else:
+        pass
+
+t, _, y,  _, _fa = extract_time(63.0, 64.5)
+find_signal(t, y)
