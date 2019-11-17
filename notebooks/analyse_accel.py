@@ -212,7 +212,7 @@ print(fftpack.fftfreq(70, 1.0/1000))
 # %%
 def find_signal(time, signal):
     # The degree of the output
-    n = 2
+    n = 3
     
     time = np.array(np.round(time * 1000), dtype=np.int)
     nogap = np.arange(time[0], time[-1] + 1, 1)
@@ -247,12 +247,6 @@ def find_signal(time, signal):
     ))
     
     
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=time, y=signal))
-    fig.add_trace(go.Scatter(x=nogap, y=u))
-    fig.show()
-    
-    
     # The paper uses 1 based indexing
     t = 0
     s = -1
@@ -260,22 +254,52 @@ def find_signal(time, signal):
     p0 = 10e6
     a_hat_t0 = np.ones(n) / p0
     b0_hat_t0 = np.ones(n+1) / p0
-    theta_t0 = np.concatenate((a_hat_t0, b0_hat_t0))
+    theta = np.concatenate((a_hat_t0, b0_hat_t0))
     # This should probably be for <=0, the paper uses <=1
     x_hat_i = np.ones(n) / p0
-    P1_t0 = p0*np.identity(2*n+1)
-    P2_1 = p0*np.identity(n)
-    rls = sip.filters.FilterRLS(n=1, mu=1, w="random")
+    P1 = p0*np.identity(2*n+1)
+    P2 = p0*np.identity(n)
+    A = np.eye(n, n, 1)
+    c = np.eye(1, n, 0)
+    print(A)
+    print(c.shape)
+    variance = 0
+    #rls = sip.filters.FilterRLS(n=5, mu=1, w="random")
     #TODO use the same wrap around trick for xhat
     phi = np.concatenate((x_hat_i, [u[t-i] for i in range(n+1)]))
-    print(P1_t0)
-    print(phi)
     if (existing_times[t]):
         s += 1
         ts = t
-        print(rls.run(theta_t0, (full_signal[t],)))
-    else:
-        pass
+        print("P1 before", P1)
+        P1 = P1 - (P1 * phi * phi.T * P1) / (1 + phi.T * P1* phi)
+        print("P1 after", P1)
+        print("theta before",  theta)
+        theta = theta + P1 @ phi * (full_signal[ts] - phi * theta)
+        print("theta after",  theta)
+        d = theta[n]
+        print("haha", full_signal[s] - phi * theta)
+        variance += (full_signal[s] - phi * theta)**2
+        print(variance)
+    
+    a = theta[0:n]
+    b = theta[n+1:]
+    d = theta[n]
+    A[n-1] = a
+    print("L", A * P2)
+    #print("L", A * P2 * c.T**2)
+    print("c.T", c.T)
+    L = (A * P2 @ c.T)
+    print(L.shape)
+    print(variance.shape)
+    print("L3", L)
+    
+    
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=time, y=signal))
+    fig.add_trace(go.Scatter(x=nogap, y=u))
+    fig.show()
+    
+    
 
 t, _, y,  _, _fa = extract_time(63.0, 64.5)
 find_signal(t, y)
