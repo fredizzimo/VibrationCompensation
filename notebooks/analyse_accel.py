@@ -255,43 +255,45 @@ def find_signal(time, signal):
     a_hat_t0 = np.ones(n) / p0
     b0_hat_t0 = np.ones(n+1) / p0
     theta = np.concatenate((a_hat_t0, b0_hat_t0))
+    theta = theta.reshape((theta.shape[0], 1))
     # This should probably be for <=0, the paper uses <=1
     x_hat_i = np.ones(n) / p0
     P1 = p0*np.identity(2*n+1)
     P2 = p0*np.identity(n)
     A = np.eye(n, n, 1)
     c = np.eye(1, n, 0)
-    print(A)
-    print(c.shape)
     variance = 0
     #rls = sip.filters.FilterRLS(n=5, mu=1, w="random")
     #TODO use the same wrap around trick for xhat
-    phi = np.concatenate((x_hat_i, [u[t-i] for i in range(n+1)]))
+    phi = np.concatenate((x_hat_i, [u[t-i] for i in range(n+1)])).T
+    phi = phi.reshape((phi.shape[0], 1))
+    print("theta", theta)
+    print("phi", phi)
+    print("P1", P1)
+    print("A", A)
     if (existing_times[t]):
         s += 1
         ts = t
-        print("P1 before", P1)
-        P1 = P1 - (P1 * phi * phi.T * P1) / (1 + phi.T * P1* phi)
-        print("P1 after", P1)
-        print("theta before",  theta)
-        theta = theta + P1 @ phi * (full_signal[ts] - phi * theta)
-        print("theta after",  theta)
+        P1 = P1 - (P1 @ phi @ phi.T @ P1) / (1 + phi.T @ P1 @ phi)
+        theta = theta + (P1 @ phi)
+        theta = theta + P1 @ phi * (full_signal[ts] - phi.T @ theta)
         d = theta[n]
-        print("haha", full_signal[s] - phi * theta)
-        variance += (full_signal[s] - phi * theta)**2
-        print(variance)
+        variance += (full_signal[s] - phi.T @ theta)**2
+        print("theta", theta)
+        print("P1", P1)
+        print("variance", variance)
     
     a = theta[0:n]
     b = theta[n+1:]
     d = theta[n]
-    A[n-1] = a
-    print("L", A * P2)
-    #print("L", A * P2 * c.T**2)
-    print("c.T", c.T)
-    L = (A * P2 @ c.T)
-    print(L.shape)
-    print(variance.shape)
-    print("L3", L)
+    A[n-1,:] = a[:,0]
+    print("A", A)
+    # I don't think A should be included...
+    #L = (A @ P2 @ c.T) / (variance + c @ P2 @ c.T)
+    print("numerator", P2 @ c.T)
+    print("denominator", variance + c @ P2 @ c.T)
+    L = (P2 @ c.T) / (variance + c @ P2 @ c.T)
+    print("L", L)
     
     
     fig = go.Figure()
