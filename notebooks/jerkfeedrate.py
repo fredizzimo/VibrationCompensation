@@ -52,9 +52,9 @@ def calculate_segments(segments):
             j = start_j
         
         if n > 0:
-            res[1,index:index+n] = x + v * ts + 0.5 * a * ts**2
-            res[2,index:index+n] = v + a * ts
-            res[3,index:index+n] = np.full(n, a)
+            res[1,index:index+n] = x + v * ts + 0.5 * a * ts**2 + j * ts**3 / 6.0
+            res[2,index:index+n] = v + a * ts + 0.5 * j * ts**2
+            res[3,index:index+n] = a + j * ts
             res[4,index:index+n] = np.full(n, j)
             ts += t
             res[0,index:index+n]=ts
@@ -157,8 +157,23 @@ def graph_trapezoidal(start_v, accel, accel_t, cruise_t, decel_t):
         (np.nan, np.nan, np.nan, -accel, 0, decel_t),
     ]
     graph_segments(segments)
+    
+def graph_jerk(start_v, jerk, t1, t2, t3, t4, t5, t6, t7):
+    segments = [
+        (0, 0, start_v, 0, jerk, t1),
+        (np.nan, np.nan, np.nan, np.nan, 0, t2),
+        (np.nan, np.nan, np.nan, np.nan, -jerk, t3),
+        (np.nan, np.nan, np.nan, np.nan, 0, t4),
+        (np.nan, np.nan, np.nan, np.nan, -jerk, t5),
+        (np.nan, np.nan, np.nan, np.nan, 0, t6),
+        (np.nan, np.nan, np.nan, np.nan, jerk, t7),
+    ]
+    graph_segments(segments)
 
 
 
 # %%
 graph_trapezoidal(0, 1000, 0.1, 0.1, 0.1)
+
+# %%
+graph_jerk(0, 10000, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1)
