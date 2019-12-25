@@ -17,12 +17,7 @@
 import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 import numpy as np
-from math import ceil
-
-
-# %%
-def generate_trapezoidal(v_start, v_end, distance, v_max, a_max):
-    return (0, 0, 0)
+from math import ceil, sqrt
 
 
 # %%
@@ -150,7 +145,7 @@ def graph_segments(segments):
     )
     fig.show()
     
-def graph_trapezoidal(start_v, accel, accel_t, cruise_t, decel_t):
+def graph_trapezoidal_t(start_v, accel, accel_t, cruise_t, decel_t):
     segments = [
         (0, 0, start_v, accel, 0, accel_t),
         (np.nan, np.nan, np.nan, 0, 0, cruise_t),
@@ -158,7 +153,7 @@ def graph_trapezoidal(start_v, accel, accel_t, cruise_t, decel_t):
     ]
     graph_segments(segments)
     
-def graph_jerk(start_v, jerk, t1, t2, t3, t4, t5, t6, t7):
+def graph_jerk_t(start_v, jerk, t1, t2, t3, t4, t5, t6, t7):
     segments = [
         (0, 0, start_v, 0, jerk, t1),
         (np.nan, np.nan, np.nan, np.nan, 0, t2),
@@ -173,7 +168,42 @@ def graph_jerk(start_v, jerk, t1, t2, t3, t4, t5, t6, t7):
 
 
 # %%
-graph_trapezoidal(0, 1000, 0.1, 0.1, 0.1)
+graph_trapezoidal_t(0, 1000, 0.1, 0.1, 0.1)
 
 # %%
-graph_jerk(0, 10000, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1)
+graph_jerk_t(0, 10000, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1)
+
+
+# %%
+def generate_trapezoidal(start_v, end_v, distance, max_v, max_a):
+    assert max_v >= start_v
+    assert max_v >= end_v
+    start_v2 = start_v**2
+    end_v2 = end_v**2
+    max_v2 = max_v**2
+    cruise_v2 = distance * max_a + 0.5 * (start_v2 + end_v2)
+    cruise_v2 = min(max_v2, cruise_v2)
+    assert cruise_v2 >= end_v2
+    half_inv_accel = 0.5 / max_a
+    accel_d = (cruise_v2 - start_v2) * half_inv_accel
+    decel_d = (cruise_v2 - end_v2) * half_inv_accel
+    cruise_d = distance - accel_d - decel_d
+    cruise_v = sqrt(cruise_v2)
+    # Determine time spent in each portion of move (time is the
+    # distance divided by average velocity)
+    accel_t = accel_d / ((start_v + cruise_v) * 0.5)
+    cruise_t = cruise_d / cruise_v
+    decel_t = decel_d / ((end_v + cruise_v) * 0.5)
+    return (
+        (0, 0, start_v, max_a, 0, accel_t),
+        (np.nan, np.nan, np.nan, 0, 0, cruise_t),
+        (np.nan, np.nan, np.nan, -max_a, 0, decel_t),
+    )
+
+def graph_trapezoidal(start_v, end_v, distance, max_v, max_a):
+    graph_segments(generate_trapezoidal(start_v, end_v, distance, max_v, max_a))
+
+
+
+# %%
+graph_trapezoidal(0, 10, 20, 100, 1000)
