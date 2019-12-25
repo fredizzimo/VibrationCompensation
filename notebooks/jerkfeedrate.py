@@ -218,14 +218,22 @@ def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     accel_t = trapezoidal[0][5]
     cruise_t = trapezoidal[1][5]
     decel_t = trapezoidal[2][5]
+    t2 = accel_t - jerk_t
+    t4 = cruise_t - jerk_t
+    t6 = decel_t - jerk_t
+    if t4 < 0:
+        
+        print("hello")
     return (
         (0, 0, start_v, 0, max_j, jerk_t),
-        (np.nan, np.nan, np.nan, np.nan, 0, accel_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, t2),
         (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
-        (np.nan, np.nan, np.nan, np.nan, 0, cruise_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, t4),
         (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
-        (np.nan, np.nan, np.nan, np.nan, 0, decel_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, t6),
         (np.nan, np.nan, np.nan, np.nan, max_j, jerk_t),
     )
 
-graph_segments(generate_jerk(10, 20, 20, 100, 1000, 100000))
+res = generate_jerk(10, 20, 10, 100, 1000, 100000)
+print(res)
+graph_segments(res)
