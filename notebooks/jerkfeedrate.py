@@ -207,3 +207,25 @@ def graph_trapezoidal(start_v, end_v, distance, max_v, max_a):
 
 # %%
 graph_trapezoidal(0, 10, 20, 100, 1000)
+
+
+# %%
+def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
+    jerk_t = max_a / max_j
+    delta_distance = start_v * (jerk_t / 2) + end_v * (jerk_t / 2)
+    print(delta_distance)
+    trapezoidal = generate_trapezoidal(start_v, end_v, distance-delta_distance, max_v, max_a)
+    accel_t = trapezoidal[0][5]
+    cruise_t = trapezoidal[1][5]
+    decel_t = trapezoidal[2][5]
+    return (
+        (0, 0, start_v, 0, max_j, jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, accel_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, cruise_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, 0, decel_t - jerk_t),
+        (np.nan, np.nan, np.nan, np.nan, max_j, jerk_t),
+    )
+
+graph_segments(generate_jerk(10, 20, 20, 100, 1000, 100000))
