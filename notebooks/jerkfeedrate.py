@@ -18,6 +18,7 @@ import plotly.graph_objects as go
 from plotly.colors import DEFAULT_PLOTLY_COLORS
 import numpy as np
 from math import ceil, sqrt
+import sympy as sp
 
 
 # %%
@@ -213,7 +214,6 @@ graph_trapezoidal(0, 10, 20, 100, 1000)
 def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     jerk_t = max_a / max_j
     delta_distance = start_v * (jerk_t / 2) + end_v * (jerk_t / 2)
-    print(delta_distance)
     trapezoidal = generate_trapezoidal(start_v, end_v, distance-delta_distance, max_v, max_a)
     accel_t = trapezoidal[0][5]
     cruise_t = trapezoidal[1][5]
@@ -221,10 +221,17 @@ def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     t2 = accel_t - jerk_t
     t4 = cruise_t - jerk_t
     t6 = decel_t - jerk_t
-    if t4 < 0:
-        
-        print("hello")
-    return (
+    tolerance = 1e-10
+    if t4 <= -tolerance:
+        max_v = sqrt((max_a*jerk_t)**2.0 + 4.0*max_a*distance + 2.0*start_v**2.0 + 2.0*end_v**2.0)
+        max_v -= jerk_t * max_a
+        max_v /= 2.0
+        return generate_jerk(start_v, end_v, distance, max_v, max_a, max_j)
+    
+    def remove_empty(segments):
+        return [s for s in segments if abs(0.0 - s[5]) > tolerance]
+    
+    return remove_empty((
         (0, 0, start_v, 0, max_j, jerk_t),
         (np.nan, np.nan, np.nan, np.nan, 0, t2),
         (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
@@ -232,8 +239,38 @@ def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
         (np.nan, np.nan, np.nan, np.nan, -max_j, jerk_t),
         (np.nan, np.nan, np.nan, np.nan, 0, t6),
         (np.nan, np.nan, np.nan, np.nan, max_j, jerk_t),
-    )
+    ))
 
-res = generate_jerk(10, 20, 10, 100, 1000, 100000)
-print(res)
-graph_segments(res)
+def graph_jerk(start_v, end_v, distance, max_v, max_a, max_j):
+    res = generate_jerk(start_v, end_v, distance, max_v, max_a, max_j)
+    graph_segments(res)
+
+def graph_trapezoidal_and_jerk(start_v, end_v, distance, max_v, max_a, max_j):
+    graph_trapezoidal(start_v, end_v, distance, max_v, max_a)
+    graph_jerk(start_v, end_v, distance, max_v, max_a, max_j)
+
+graph_trapezoidal_and_jerk(0, 0, 10.5, 100, 1000, 100000)
+
+# %%
+#No adaptation
+graph_trapezoidal_and_jerk(0, 0, 20, 100, 1000, 100000)
+
+# %%
+#Type 2
+graph_trapezoidal_and_jerk(0, 0, 10.5, 100, 1000, 100000)
+
+
+# %%
+def adjust_cruise_speed_formula():
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    d = sp.symbols("d")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    a_max = sp.symbols("a_max")
+
+    eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_max)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_max)))
+    
+    display(eq_d)
+    eq_v_c = sp.Eq(v_c, sp.together(sp.solve(eq_d, v_c)[1]))
+    display(eq_v_c)
+
+adjust_cruise_speed_formula()
