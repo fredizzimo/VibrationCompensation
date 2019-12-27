@@ -215,6 +215,10 @@ def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     jerk_t = max_a / max_j
     delta_distance = start_v * (jerk_t / 2) + end_v * (jerk_t / 2)
     trapezoidal = generate_trapezoidal(start_v, end_v, distance-delta_distance, max_v, max_a)
+    print("start")
+    print(trapezoidal)
+    graph_segments(trapezoidal)
+    print("end")
     accel_t = trapezoidal[0][5]
     cruise_t = trapezoidal[1][5]
     decel_t = trapezoidal[2][5]
@@ -226,6 +230,10 @@ def generate_jerk(start_v, end_v, distance, max_v, max_a, max_j):
         max_v = sqrt((max_a*jerk_t)**2.0 + 4.0*max_a*distance + 2.0*start_v**2.0 + 2.0*end_v**2.0)
         max_v -= jerk_t * max_a
         max_v /= 2.0
+        return generate_jerk(start_v, end_v, distance, max_v, max_a, max_j)
+    if t2 <= -tolerance:
+        max_a = sqrt(max_j / max_v)
+        print(max_a)
         return generate_jerk(start_v, end_v, distance, max_v, max_a, max_j)
     
     def remove_empty(segments):
@@ -249,7 +257,7 @@ def graph_trapezoidal_and_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     graph_trapezoidal(start_v, end_v, distance, max_v, max_a)
     graph_jerk(start_v, end_v, distance, max_v, max_a, max_j)
 
-graph_trapezoidal_and_jerk(0, 0, 10.5, 100, 1000, 100000)
+graph_trapezoidal_and_jerk(95, 0, 20, 100, 1000, 100000)
 
 # %%
 #No adaptation
