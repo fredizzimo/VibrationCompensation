@@ -282,3 +282,5 @@ def adjust_cruise_speed_formula():
     display(eq_v_c)
 
 adjust_cruise_speed_formula()
+
+# %%
