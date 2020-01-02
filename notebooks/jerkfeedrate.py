@@ -257,7 +257,8 @@ def graph_trapezoidal_and_jerk(start_v, end_v, distance, max_v, max_a, max_j):
     graph_trapezoidal(start_v, end_v, distance, max_v, max_a)
     graph_jerk(start_v, end_v, distance, max_v, max_a, max_j)
 
-graph_trapezoidal_and_jerk(95, 0, 20, 100, 1000, 100000)
+#graph_trapezoidal_and_jerk(95, 0, 20, 100, 1000, 100000)
+
 
 # %%
 #No adaptation
@@ -283,4 +284,65 @@ def adjust_cruise_speed_formula():
 
 adjust_cruise_speed_formula()
 
+
 # %%
+def adjust_distance_formula():
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    d, d_jerk, delta_d = sp.symbols(r"d d_jerk {\Delta}d")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    a_a, a_d = sp.symbols("a_a a_d")
+    j = sp.symbols("j")
+
+    ts = [
+        a_a / j,
+        t_a - (a_a / j),
+        a_a / j,
+        t_c - (a_a / j),
+        a_d / j,
+        t_d - (a_d / j),
+        a_d / j
+    ]
+    jerks = [
+        j,
+        0,
+        -j,
+        0,
+        -j,
+        0,
+        j
+    ]
+    def calculate_jerk():
+        x = 0
+        v = v_s
+        a = 0
+        for t, j in zip(ts, jerks):
+            x += v * t + (a * t**2) / 2 + (j * t**3) / 6
+            v += a * t + (j * t**2) / 2
+            a += j * t
+        return x.simplify()
+    eq_d_jerk = sp.Eq(d_jerk, calculate_jerk())
+    display(eq_d_jerk.factor())
+    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.lhs - d)
+    display(eq_delta_d)
+    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.rhs - d)
+    eq_delta_d = eq_delta_d.factor()
+    display(eq_delta_d)
+    
+    eq_t_a = sp.Eq(t_a, (v_c-v_s) / a_a)
+    eq_t_d = sp.Eq(t_d, (v_c-v_e) / a_d)
+    display(eq_t_a)
+    display(eq_t_d)
+    
+    
+    eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_a)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_d)))
+    display(eq_d)
+    eq_t_c = sp.Eq(t_c, sp.solve(eq_d, t_c)[0])
+    display(eq_t_c)
+    
+    eq_delta_d = eq_delta_d.subs(eq_t_a.lhs, eq_t_a.rhs)
+    eq_delta_d = eq_delta_d.subs(eq_t_d.lhs, eq_t_d.rhs)
+    eq_delta_d = eq_delta_d.subs(eq_t_c.lhs, eq_t_c.rhs)
+    eq_delta_d = eq_delta_d.expand().simplify()
+    display(eq_delta_d)
+
+adjust_distance_formula()
