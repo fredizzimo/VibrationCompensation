@@ -274,13 +274,20 @@ def adjust_cruise_speed_formula():
     v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
     d = sp.symbols("d")
     t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
-    a_max = sp.symbols("a_max")
+    a_a, a_d = sp.symbols("a_a a_d")
 
-    eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_max)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_max)))
+    eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_a)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_d)))
     
     display(eq_d)
-    eq_v_c = sp.Eq(v_c, sp.together(sp.solve(eq_d, v_c)[1]))
+    eq_v_c = sp.Eq(v_c, sp.together(sp.solve(eq_d, v_c)[0]))
+    eq_v_c = eq_v_c.factor()
     display(eq_v_c)
+    display(eq_v_c.rhs.args[2].args[0].args[1].args[0].simplify())
+    subexpr = sp.cse(eq_v_c.rhs, optimizations="basic")
+    for expr in subexpr[0]:
+        display(sp.Eq(expr[0], expr[1]))
+    display(subexpr[1][0].collect(("x0", "x4", "x3")))
+    print(subexpr[1][0])
 
 adjust_cruise_speed_formula()
 
