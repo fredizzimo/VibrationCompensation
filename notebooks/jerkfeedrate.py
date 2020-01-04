@@ -293,22 +293,7 @@ adjust_cruise_speed_formula()
 
 
 # %%
-def adjust_distance_formula():
-    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
-    d, d_jerk, delta_d = sp.symbols(r"d d_jerk {\Delta}d")
-    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
-    a_a, a_d = sp.symbols("a_a a_d")
-    j = sp.symbols("j")
-
-    ts = [
-        a_a / j,
-        t_a - (a_a / j),
-        a_a / j,
-        t_c - (a_a / j),
-        a_d / j,
-        t_d - (a_d / j),
-        a_d / j
-    ]
+def calculate_jerk(ts, v_start, j):
     jerks = [
         j,
         0,
@@ -318,16 +303,35 @@ def adjust_distance_formula():
         0,
         j
     ]
-    def calculate_jerk():
-        x = 0
-        v = v_s
-        a = 0
-        for t, j in zip(ts, jerks):
-            x += v * t + (a * t**2) / 2 + (j * t**3) / 6
-            v += a * t + (j * t**2) / 2
-            a += j * t
-        return x.simplify()
-    eq_d_jerk = sp.Eq(d_jerk, calculate_jerk())
+    x = 0
+    v = v_start
+    a = 0
+    for t, j in zip(ts, jerks):
+        x += v * t + (a * t**2) / 2 + (j * t**3) / 6
+        v += a * t + (j * t**2) / 2
+        a += j * t
+    return x.simplify(), v.simplify()
+
+
+# %%
+def adjust_distance_formula():
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    d, d_jerk, delta_d = sp.symbols(r"d d_jerk {\Delta}d")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    a_a, a_d = sp.symbols("a_a a_d")
+    j = sp.symbols("j")
+    
+    ts = [
+        a_a / j,
+        t_a - (a_a / j),
+        a_a / j,
+        t_c - (a_a / j),
+        a_d / j,
+        t_d - (a_d / j),
+        a_d / j
+    ]
+
+    eq_d_jerk = sp.Eq(d_jerk, calculate_jerk(ts, v_s, j)[0])
     display(eq_d_jerk.factor())
     eq_delta_d = sp.Eq(delta_d, eq_d_jerk.lhs - d)
     display(eq_delta_d)
@@ -353,6 +357,40 @@ def adjust_distance_formula():
     display(eq_delta_d)
 
 adjust_distance_formula()
+
+
+# %%
+def full_jerk_reached_max_a_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    v_s, v_e = sp.symbols("v_s v_e")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    
+    t_a = a_max / j 
+    t_d = a_max / j
+    
+    ts = [
+        t_a,
+        t_c,
+        t_d,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    display(eq_d)
+    display(eq_v)
+    eq_t_c = sp.Eq(t_c, sp.solve(eq_v, t_c)[0])
+    display(eq_t_c)
+    
+    eq_d = sp.Eq(d, eq_d.rhs.subs(t_c, eq_t_c.rhs))
+    display(eq_d.simplify())
+
+full_jerk_reached_max_a_formula()
 
 
 # %%
