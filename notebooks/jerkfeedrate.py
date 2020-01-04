@@ -394,6 +394,42 @@ full_jerk_reached_max_a_formula()
 
 
 # %%
+def full_jerk_max_a_not_reached_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    v_s, v_e = sp.symbols("v_s v_e")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    
+    t_a = a_max / j 
+    t_d = a_max / j
+    
+    ts = [
+        t_a,
+        0,
+        t_d,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    display(eq_d)
+    display(eq_v)
+    
+    eq_a_max = sp.Eq(a_max, sp.solve(eq_v, a_max)[1])
+    display(eq_a_max)
+    
+    eq_d = eq_d.subs(a_max, eq_a_max.rhs).simplify()
+    display(eq_d)
+    
+
+full_jerk_max_a_not_reached_formula()
+    
+
+# %%
 def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
     import numpy as np
     from scipy.optimize import minimize
@@ -465,7 +501,7 @@ def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
         {"type": "ineq", "fun": cons_speed},
         {"type": "ineq", "fun": cons_accel}
     )
-    res = minimize(f, [1,1,1,1,1,1,1], bounds=[(0,None)]*7, constraints=cons, options={"ftol": 1e-12})
+    res = minimize(f, [0,0,0,0,0,0,0], bounds=[(0,None)]*7, constraints=cons, options={"ftol": 1e-12})
     print(res)
     if res.success:
         graph_jerk_t(start_v, jerk, *res.x)
@@ -476,3 +512,7 @@ optimize_jerk_profile(6.6, 95, 100, 30, 1000, 100000)
 
 # %%
 optimize_jerk_profile(6.4, 95, 100, 30, 1000, 100000)
+
+# %%
+t = 0.06
+graph_jerk_t(30, 100000, t, 0, t, 0, 0, 0, 0)
