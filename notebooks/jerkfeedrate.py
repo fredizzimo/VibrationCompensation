@@ -346,3 +346,88 @@ def adjust_distance_formula():
     display(eq_delta_d)
 
 adjust_distance_formula()
+
+
+# %%
+def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
+    import numpy as np
+    from scipy.optimize import minimize
+
+    def calculate_move(jerk_t):
+        x = 0
+        v = start_v
+        a = 0
+        j = jerk
+        jerk_multipliers = [
+            1,
+            0,
+            -1,
+            0,
+            -1,
+            0,
+            1
+        ]
+
+        distances = []
+        speeds = []
+        accs = []
+        jerks = []
+
+        for i, segment in enumerate(jerk_t):
+            t = segment
+            if t:
+                j = jerk * jerk_multipliers[i]
+                x += v * t + 0.5 * a * t**2 + j * t**3 / 6.0
+                v += a * t + 0.5 * j * t**2
+                a += j * t
+            distances.append(x)
+            speeds.append(v)
+            accs.append(a)
+            jerks.append(j)
+        return distances, speeds, accs, jerks
+
+    def f(jerk_t):
+        return np.sum(jerk_t)
+
+    def cons_distance(jerk_t):
+        distances, _, _, _ = calculate_move(jerk_t)
+        return distances[-1] - distance
+
+    def cons_speed(jerk_t):
+        _, speeds, _, _ = calculate_move(jerk_t)
+        speeds = np.array(speeds)
+        return max_v - speeds
+
+    def cons_endv(jerk_t):
+        _, speeds, _, _ = calculate_move(jerk_t)
+        return end_v - speeds[-1]
+
+    def cons_accel(jerk_t):
+        _, _, accs, _ = calculate_move(jerk_t)
+        accs = np.array(accs)
+        accs = np.abs(accs)
+        return accel - accs
+
+    def cons_enda(jerk_t):
+        _, _, accs, _ = calculate_move(jerk_t)
+        return 0.0 - accs[-1]
+
+
+    cons = (
+        {"type": "eq", "fun": cons_distance},
+        {"type": "eq", "fun": cons_endv},
+        {"type": "eq", "fun": cons_enda},
+        {"type": "ineq", "fun": cons_speed},
+        {"type": "ineq", "fun": cons_accel}
+    )
+    res = minimize(f, [1,1,1,1,1,1,1], bounds=[(0,None)]*7, constraints=cons, options={"ftol": 1e-12})
+    print(res)
+    if res.success:
+        graph_jerk_t(start_v, jerk, *res.x)
+
+
+# %%
+optimize_jerk_profile(6.6, 95, 100, 30, 1000, 100000)
+
+# %%
+optimize_jerk_profile(6.4, 95, 100, 30, 1000, 100000)
