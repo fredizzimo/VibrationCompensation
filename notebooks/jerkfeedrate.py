@@ -293,7 +293,7 @@ adjust_cruise_speed_formula()
 
 
 # %%
-def calculate_jerk(ts, v_start, j):
+def calculate_jerk(ts, v_start, j, a_start=0):
     jerks = [
         j,
         0,
@@ -305,7 +305,7 @@ def calculate_jerk(ts, v_start, j):
     ]
     x = 0
     v = v_start
-    a = 0
+    a = a_start
     for t, j in zip(ts, jerks):
         x += v * t + (a * t**2) / 2 + (j * t**3) / 6
         v += a * t + (j * t**2) / 2
@@ -314,35 +314,47 @@ def calculate_jerk(ts, v_start, j):
 
 
 # %%
-def adjust_distance_formula():
-    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+def adjust_speed_and_distance_formula():
+    v_s, v_c, v_e, v_e_j = sp.symbols("v_s v_c v_e, v_{e_{jerk}}")
+    delta_v = sp.symbols(r"{\Delta}v")
     d, d_jerk, delta_d = sp.symbols(r"d d_jerk {\Delta}d")
     t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
-    a_a, a_d = sp.symbols("a_a a_d")
+    a_a, a_d, a_s = sp.symbols("a_a a_d a_s")
     j = sp.symbols("j")
     
     ts = [
-        a_a / j,
-        t_a - (a_a / j),
+        (a_a-a_s) / j,
+        t_a - ((a_a-a_s) / j),
         a_a / j,
         t_c - (a_a / j),
         a_d / j,
         t_d - (a_d / j),
         a_d / j
     ]
-
-    eq_d_jerk = sp.Eq(d_jerk, calculate_jerk(ts, v_s, j)[0])
-    display(eq_d_jerk.factor())
-    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.lhs - d)
-    display(eq_delta_d)
-    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.rhs - d)
-    eq_delta_d = eq_delta_d.factor()
-    display(eq_delta_d)
+    
+    eqs = calculate_jerk(ts, v_s, j, a_s)
+    eq_v_e_j = sp.Eq(v_e_j, eqs[1])
+    display(eq_v_e_j)
+    
+    eq_delta_v = sp.Eq(delta_v, v_e_j - v_e)
+    display(eq_delta_v)
+    eq_delta_v = eq_delta_v.subs(v_e_j, eq_v_e_j.rhs)
+    display(eq_delta_v)
     
     eq_t_a = sp.Eq(t_a, (v_c-v_s) / a_a)
     eq_t_d = sp.Eq(t_d, (v_c-v_e) / a_d)
     display(eq_t_a)
     display(eq_t_d)
+    
+    eq_delta_v = eq_delta_v.subs(eq_t_a.lhs, eq_t_a.rhs)
+    eq_delta_v = eq_delta_v.subs(eq_t_d.lhs, eq_t_d.rhs)
+    display(eq_delta_v.simplify())
+    
+    eq_d_jerk = sp.Eq(d_jerk, eqs[0].factor())
+    display(eq_d_jerk)
+    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.lhs - d)
+    display(eq_delta_d)
+    eq_delta_d = sp.Eq(delta_d, eq_d_jerk.rhs - d)
     
     
     eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_a)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_d)))
@@ -350,13 +362,38 @@ def adjust_distance_formula():
     eq_t_c = sp.Eq(t_c, sp.solve(eq_d, t_c)[0])
     display(eq_t_c)
     
+    eq_t_a = eq_t_a.subs(v_s, v_s + eq_delta_v.rhs).simplify()
+    display(eq_t_a)
+    eq_t_c = eq_t_c.subs(v_s, v_s + eq_delta_v.rhs).simplify()
+    display(eq_t_c)
+    eq_t_d = eq_t_d.subs(v_s, v_s + eq_delta_v.rhs).simplify()
+    display(eq_t_d)
+    
     eq_delta_d = eq_delta_d.subs(eq_t_a.lhs, eq_t_a.rhs)
     eq_delta_d = eq_delta_d.subs(eq_t_d.lhs, eq_t_d.rhs)
     eq_delta_d = eq_delta_d.subs(eq_t_c.lhs, eq_t_c.rhs)
-    eq_delta_d = eq_delta_d.expand().simplify()
+    eq_delta_d = eq_delta_d.expand()
+    eq_delta_d = sp.Eq(delta_d, eq_delta_d.rhs.collect((a_a,a_d)))
+    eq_delta_d = eq_delta_d.simplify()
     display(eq_delta_d)
+    
+    subexpr = sp.cse(eq_delta_d.rhs.expand(), optimizations="basic")
+    print(subexpr)
+    for expr in subexpr[0]:
+        display(sp.Eq(expr[0], expr[1]))
+    expr =  subexpr[1][0].collect(("x0", "x1", "x2"))
+    display(expr)
+    subexpr = 3*a_a*a_s**2 - 2*a_s**3
+    display(subexpr)
+    expr = expr.subs(subexpr, sp.horner(subexpr, wrt=a_s))
+    #display(subexpr)
+    display(expr)
+    #print(subexpr[1][0])
+    sp.horner??
+    
+    
 
-adjust_distance_formula()
+adjust_speed_and_distance_formula()
 
 
 # %%
@@ -514,5 +551,5 @@ optimize_jerk_profile(6.6, 95, 100, 30, 1000, 100000)
 optimize_jerk_profile(6.4, 95, 100, 30, 1000, 100000)
 
 # %%
-t = 0.06
+t = 0.01
 graph_jerk_t(30, 100000, t, 0, t, 0, 0, 0, 0)
