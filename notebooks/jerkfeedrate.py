@@ -319,7 +319,7 @@ def adjust_speed_and_distance_formula():
     delta_v = sp.symbols(r"{\Delta}v")
     d, d_jerk, delta_d = sp.symbols(r"d d_jerk {\Delta}d")
     t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
-    a_a, a_d, a_s = sp.symbols("a_a a_d a_s")
+    a_a, a_d, a_s, a_e = sp.symbols("a_a a_d a_s a_e")
     j = sp.symbols("j")
     
     ts = [
@@ -329,7 +329,7 @@ def adjust_speed_and_distance_formula():
         t_c - (a_a / j),
         a_d / j,
         t_d - (a_d / j),
-        a_d / j
+        (a_d - a_e) / j
     ]
     
     eqs = calculate_jerk(ts, v_s, j, a_s)
@@ -355,20 +355,20 @@ def adjust_speed_and_distance_formula():
     eq_delta_d = sp.Eq(delta_d, eq_d_jerk.lhs - d)
     display(eq_delta_d)
     eq_delta_d = sp.Eq(delta_d, eq_d_jerk.rhs - d)
-    
-    
+
+
     eq_d = sp.Eq(d, sp.together((v_c**2 - v_s**2) / (2 * a_a)) + v_c * t_c + sp.together((v_c**2 - v_e**2) / (2 * a_d)))
     display(eq_d)
     eq_t_c = sp.Eq(t_c, sp.solve(eq_d, t_c)[0])
     display(eq_t_c)
-    
+
     eq_t_a = eq_t_a.subs(v_s, v_s + eq_delta_v.rhs).simplify()
     display(eq_t_a)
     eq_t_c = eq_t_c.subs(v_s, v_s + eq_delta_v.rhs).simplify()
     display(eq_t_c)
     eq_t_d = eq_t_d.subs(v_s, v_s + eq_delta_v.rhs).simplify()
     display(eq_t_d)
-    
+
     eq_delta_d = eq_delta_d.subs(eq_t_a.lhs, eq_t_a.rhs)
     eq_delta_d = eq_delta_d.subs(eq_t_d.lhs, eq_t_d.rhs)
     eq_delta_d = eq_delta_d.subs(eq_t_c.lhs, eq_t_c.rhs)
@@ -377,20 +377,17 @@ def adjust_speed_and_distance_formula():
     eq_delta_d = eq_delta_d.simplify()
     display(eq_delta_d)
     
-    subexpr = sp.cse(eq_delta_d.rhs.expand(), optimizations="basic")
-    print(subexpr)
-    for expr in subexpr[0]:
-        display(sp.Eq(expr[0], expr[1]))
-    expr =  subexpr[1][0].collect(("x0", "x1", "x2"))
-    display(expr)
-    subexpr = 3*a_a*a_s**2 - 2*a_s**3
-    display(subexpr)
-    expr = expr.subs(subexpr, sp.horner(subexpr, wrt=a_s))
-    #display(subexpr)
-    display(expr)
-    #print(subexpr[1][0])
-    sp.horner??
-    
+    if False:
+        subexpr = sp.cse(eq_delta_d.rhs.expand(), optimizations="basic")
+        print(subexpr)
+        for expr in subexpr[0]:
+            display(sp.Eq(expr[0], expr[1]))
+        expr =  subexpr[1][0].collect(("x0", "x1", "x2"))
+        display(expr)
+        subexpr = 3*a_a*a_s**2 - 2*a_s**3
+        display(subexpr)
+        expr = expr.subs(subexpr, sp.horner(subexpr, wrt=a_s))
+        display(expr)
     
 
 adjust_speed_and_distance_formula()
