@@ -473,6 +473,41 @@ max_end_v_max_a_not_reached_formula()
 
 
 # %%
+def max_end_v_max_a_reached_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    v_s, v_e = sp.symbols("v_s v_e")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    
+    t_a = a_max / j 
+    t_d = a_max / j
+    
+    ts = [
+        t_a,
+        t_c,
+        t_d,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    display(eq_d)
+    display(eq_v)
+    eq_t_c = sp.Eq(t_c, sp.solve(eq_v, t_c)[0])
+    display(eq_t_c)
+    eq_d = sp.Eq(d, eq_d.rhs.subs(t_c, eq_t_c.rhs).simplify())
+    display(eq_d)
+    eq_v_e = sp.Eq(v_e, sp.solve(eq_d, v_e)[0].simplify())
+    display(eq_v_e)
+    
+max_end_v_max_a_reached_formula()
+
+
+# %%
 def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
     import numpy as np
     from scipy.optimize import minimize
