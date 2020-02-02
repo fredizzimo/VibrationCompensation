@@ -477,6 +477,7 @@ def max_end_v_max_a_reached_formula():
     a_max = sp.symbols("a_max")
     j = sp.symbols("j")
     d = sp.symbols("d")
+    d_min = sp.symbols("d_min")
     v_s, v_e = sp.symbols("v_s v_e")
     t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
     
@@ -497,6 +498,10 @@ def max_end_v_max_a_reached_formula():
     eq_v = sp.Eq(v_e, eq_v)
     display(eq_d)
     display(eq_v)
+    
+    eq_d_min = sp.Eq(d_min, eq_d.rhs.subs(t_c, 0))
+    display(eq_d_min)
+    
     eq_t_c = sp.Eq(t_c, sp.solve(eq_v, t_c)[0])
     display(eq_t_c)
     eq_d = sp.Eq(d, eq_d.rhs.subs(t_c, eq_t_c.rhs).simplify())
@@ -504,7 +509,82 @@ def max_end_v_max_a_reached_formula():
     eq_v_e = sp.Eq(v_e, sp.solve(eq_d, v_e)[0].simplify())
     display(eq_v_e)
     
+    temp = eq_v_e.rhs.args[2].args[0].args[0]
+    display(temp)
+    poly = sp.poly(temp, j)
+    display(poly.nth(0))
+    eq_v_e = eq_v_e.replace(temp, sp.horner(poly))
+    display(eq_v_e)
+    
 max_end_v_max_a_reached_formula()
+
+
+# %%
+def full_acc_allowed_no_const_acc_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    d_full = sp.symbols("d_full")
+    v_s, v_e = sp.symbols("v_s v_e")
+    t_a = sp.symbols("t_a")
+    
+    ts = [
+        t_a,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    display(eq_d)
+    display(eq_v)
+    eq_d_full = sp.Eq(d_full, eq_d.rhs.subs(t_a, a_max / j).simplify())
+    display(eq_d_full)
+    eq_t_a = sp.Eq(t_a, sp.solve(eq_v, t_a)[1])
+    display(eq_t_a)
+    eq_d = eq_d.subs(t_a, eq_t_a.rhs).simplify()
+    display(eq_d)
+    
+    
+full_acc_allowed_no_const_acc_formula()
+
+
+# %%
+def full_acc_allowed_const_acc_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    d_min = sp.symbols("d_min")
+    v_s, v_e = sp.symbols("v_s v_e")
+    t_a, t_c = sp.symbols("t_a t_c")
+    
+    t_a = a_max / j
+    
+    ts = [
+        t_a,
+        t_c,
+        0,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    display(eq_d)
+    display(eq_v)
+    eq_t_c = sp.Eq(t_c, sp.solve(eq_v, t_c)[0])
+    display(eq_t_c)
+    eq_d = eq_d.subs(t_c, eq_t_c.rhs).simplify()
+    display(eq_d)
+    
+    
+full_acc_allowed_const_acc_formula()
 
 
 # %%
