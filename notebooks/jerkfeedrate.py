@@ -427,7 +427,50 @@ def full_jerk_max_a_not_reached_formula():
     
 
 full_jerk_max_a_not_reached_formula()
+
+
+# %%
+def max_end_v_max_a_not_reached_formula():
+    j = sp.symbols("j", real=True)
+    d = sp.symbols("d", postive=True)
+    v_s, v_e = sp.symbols("v_s v_e", positive=True)
+    t = sp.symbols("t", positive=True)
+    p, q = sp.symbols("p q")
     
+    ts = [
+        t/2,
+        0,
+        t/2,
+        0,
+        0,
+        0,
+        0
+    ]
+    eq_d, eq_v = calculate_jerk(ts, v_s, j)
+    eq_d = sp.Eq(d, eq_d)
+    eq_v = sp.Eq(v_e, eq_v)
+    
+    display(eq_d)
+    display(eq_v)
+    
+    eq_t = sp.Eq(t**2, sp.solve(eq_v, t**2)[0])
+    display(eq_t)
+    
+    eq_d = eq_d.subs(t**2, eq_t.rhs).simplify()
+    display(eq_d)
+    eq_d = sp.Eq(eq_d.lhs**2, eq_d.rhs**2)
+    display(eq_d)
+    eq_d = sp.Eq(eq_d.rhs - eq_d.lhs, 0)
+    display(eq_d)
+    eq_d_diff = eq_d.lhs.diff(v_e).simplify()
+    display(eq_d_diff)
+    
+    eq_newton = eq_d.lhs / eq_d_diff
+    eq_newton = eq_newton.simplify()
+    display(eq_newton)
+
+max_end_v_max_a_not_reached_formula()
+
 
 # %%
 def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
@@ -516,3 +559,5 @@ optimize_jerk_profile(6.4, 95, 100, 30, 1000, 100000)
 # %%
 t = 0.06
 graph_jerk_t(30, 100000, t, 0, t, 0, 0, 0, 0)
+
+# %%
