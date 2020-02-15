@@ -581,10 +581,47 @@ def full_acc_allowed_const_acc_formula():
     eq_t_c = sp.Eq(t_c, sp.solve(eq_v, t_c)[0])
     display(eq_t_c)
     eq_d = eq_d.subs(t_c, eq_t_c.rhs).simplify()
+    
     display(eq_d)
     
     
 full_acc_allowed_const_acc_formula()
+
+
+# %%
+def short_distance_same_speed_formula():
+    a_max = sp.symbols("a_max")
+    j = sp.symbols("j")
+    d = sp.symbols("d")
+    v = sp.symbols("v")
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    t_a, t_c, t_d = sp.symbols("t_a t_c t_d")
+    
+    ts = [
+        t_a,
+        0,
+        t_a,
+        0,
+        t_d,
+        0,
+        t_d
+    ]
+    eq_d_full, eq_v_full = calculate_jerk(ts, v_s, j)
+    eq_d_full = sp.Eq(d, eq_d_full)
+    eq_v_full = sp.Eq(v_e, eq_v_full)
+    eq_d = sp.Eq(d, eq_d_full.rhs.subs(t_d, t_a))
+    eq_v = sp.Eq(v, eq_d.rhs.diff(t_a))
+    display(eq_d)
+    display(eq_v)
+    eq_v_c =sp.Eq(v_c, eq_v_full.rhs.subs(t_d, 0))
+    display(eq_v_c)
+    eq_t_a = sp.Eq(t_a, sp.solve(eq_v_c, t_a)[1])
+    display(eq_t_a)
+    
+    
+    
+
+short_distance_same_speed_formula()
 
 
 # %%
