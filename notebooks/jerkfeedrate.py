@@ -23,10 +23,11 @@ import sympy as sp
 
 # %%
 def calculate_segments(segments):
+    linear_advance=0.05
     dt = 0.001
     num_t = [int(ceil(segment_time / dt)) for _,_,_,_,_,segment_time in segments]
     total_num_t = np.sum(num_t)
-    res = np.empty((5, total_num_t))
+    res = np.empty((8, total_num_t))
     index = 0
     t = np.nan
     x = np.nan
@@ -52,6 +53,9 @@ def calculate_segments(segments):
             res[2,index:index+n] = v + a * ts + 0.5 * j * ts**2
             res[3,index:index+n] = a + j * ts
             res[4,index:index+n] = np.full(n, j)
+            res[5,index:index+n] = res[1,index:index+n] + linear_advance * res[2,index:index+n]
+            res[6,index:index+n] = v + a*ts + 0.5*j*ts**2 + linear_advance * (a + j*ts)
+            res[7,index:index+n] = a + j*ts + linear_advance * j
             ts += t
             res[0,index:index+n]=ts
             t = res[0,index+n-1]
@@ -92,6 +96,21 @@ def graph_segments(segments):
         yaxis="y4",
         legendgroup="jerk",
         line=go.scatter.Line(color=j_color)))
+    fig.add_trace(go.Scatter(
+        x=result[0], y=result[5], name="Linear Advance x",
+        yaxis="y1",
+        legendgroup="position",
+        line=go.scatter.Line(color=x_color, dash="dash")))
+    fig.add_trace(go.Scatter(
+        x=result[0], y=result[6], name="Linear Advance v",
+        yaxis="y2",
+        legendgroup="velocity",
+        line=go.scatter.Line(color=v_color, dash="dash")))
+    fig.add_trace(go.Scatter(
+        x=result[0], y=result[7], name="Linear Advance a",
+        yaxis="y3",
+        legendgroup="acceleration",
+        line=go.scatter.Line(color=a_color, dash="dash")))
     tickfont = go.layout.yaxis.Tickfont(size=8)
     titlefont = go.layout.yaxis.title.Font(size=8)
     fig.update_layout(
@@ -590,7 +609,7 @@ full_acc_allowed_const_acc_formula()
 
 # %%
 def short_distance_same_speed_formula():
-    a_max = sp.symbols("a_max")
+    a_max = sp.symbols("a_max, a_new")
     j = sp.symbols("j")
     d = sp.symbols("d")
     v = sp.symbols("v")
