@@ -644,6 +644,62 @@ short_distance_same_speed_formula()
 
 
 # %%
+def adaptation_formulas():
+    d, d_adj = sp.symbols("d d_adj")
+    d_a, d_ad, d_c, d_d = sp.symbols("d_a d_ad d_c d_d")
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    a_a, a_d = sp.symbols("a_a a_d")
+    j = sp.symbols("j")
+    t_a = sp.symbols("t_a")
+    eq_dist = sp.Eq(d_a + d_ad + d_c + d_d,d_adj)
+    display(eq_dist)
+    eq_d_a = sp.Eq(d_a, (v_c**2 - v_s**2) / (2*a_a))
+    display(eq_d_a)
+    eq_d_ad = sp.Eq(d_ad, v_c*(a_a/j))
+    display(eq_d_ad)
+    eq_d_d = sp.Eq(d_d, (v_c**2 - v_e**2) / (2*a_d))
+    display(eq_d_d)
+    eq_d_adj = sp.Eq(d_adj, d - (a_a*(v_s - v_c) + a_d*(v_e + v_c)) / (2*j))
+    display(eq_d_adj)
+    eq = eq_dist.subs(d_adj, eq_d_adj.rhs).subs(d_a, eq_d_a.rhs).subs(d_ad, eq_d_ad.rhs).subs(d_d, eq_d_d.rhs)
+    display(eq)
+    eq_no_adapt = sp.Eq(d_c, sp.solve(eq, d_c)[0])
+    display(eq_no_adapt)
+    
+    eq_type_II = eq_no_adapt.subs(d_c, 0)
+    eq_type_II_poly = sp.Poly(eq_type_II.rhs, v_c)
+    eq_type_II = sp.Eq(eq_type_II_poly.as_expr(), 0)
+    display(eq_type_II)
+    
+    eq_new_accel = sp.Eq(a_a, sp.sqrt(j*(v_c - v_s)))
+    display(eq_new_accel)
+    eq_new_decel = sp.Eq(a_d, sp.sqrt(j*(v_c - v_e)))
+    display(eq_new_decel)
+    eq_v_c = sp.Eq(v_c, sp.solve(eq_new_accel, v_c)[0])
+    display(eq_v_c)
+    
+    eq = eq_dist.subs(d_c, 0)
+    display(eq)
+    eq = eq.subs(d_adj, eq_d_adj.rhs).subs(d_a, eq_d_a.rhs).subs(d_ad, eq_d_ad.rhs).subs(d_d, eq_d_d.rhs)
+    display(eq)
+    eq = eq.subs(v_c, eq_v_c.rhs)
+    display(eq)
+    poly = sp.Poly(eq, a_a)
+    eq = sp.Eq(poly.as_expr(), 0)
+    display(eq)
+    exprs = sp.cse(poly.all_coeffs())
+    for e in exprs[0]:
+        print("%s = %s" % e)
+    print("a = %s" % (exprs[1][0],))
+    print("b = %s" % (exprs[1][1],))
+    print("c = %s" % (exprs[1][2],))
+    print("d = %s" % (exprs[1][3],))
+    print("e = %s" % (exprs[1][4],))
+
+adaptation_formulas()
+
+
+# %%
 def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
     import numpy as np
     from scipy.optimize import minimize
