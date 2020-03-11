@@ -769,6 +769,84 @@ adaptation_formulas()
 
 
 # %%
+def adaptation_formulas2():
+    d, d_adj = sp.symbols("d d_adj")
+    d_a, d_ad, d_c, d_d = sp.symbols("d_a d_ad d_c d_d")
+    v_s, v_c, v_e = sp.symbols("v_s v_c v_e")
+    a_a, a_d = sp.symbols("a_a a_d")
+    j = sp.symbols("j")
+    t_a = sp.symbols("t_a")
+    eq_dist = sp.Eq(d_a + d_ad + d_c + d_d,d_adj)
+    display(eq_dist)
+    display("Calculate the cruise distance when v_c is reached")
+    eq_d_a = sp.Eq(d_a, (v_c**2 - v_s**2) / (2*a_a))
+    display(eq_d_a)
+    eq_d_ad = sp.Eq(d_ad, v_c*(a_a/j))
+    display(eq_d_ad)
+    eq_d_d = sp.Eq(d_d, (v_c**2 - v_e**2) / (2*a_d))
+    display(eq_d_d)
+    eq_d_adj = sp.Eq(d_adj, d - (a_a*(v_s - v_c) + a_d*(v_e + v_c)) / (2*j))
+    display(eq_d_adj)
+    eq = eq_dist.subs(d_adj, eq_d_adj.rhs).subs(d_a, eq_d_a.rhs).subs(d_ad, eq_d_ad.rhs).subs(d_d, eq_d_d.rhs)
+    display(eq)
+    eq_no_adapt = sp.Eq(d_c, sp.solve(eq, d_c)[0])
+    display(eq_no_adapt)
+    
+    display("Type II")
+    eq_type_II = eq_no_adapt.subs(d_c, 0)
+    eq_type_II_poly = sp.Poly(eq_type_II.rhs, v_c)
+    eq_type_II = sp.Eq(eq_type_II_poly.as_expr(), 0)
+    display(eq_type_II)
+    
+    display("Acceleration adaptation formulas")
+    eq_new_accel = sp.Eq(a_a, sp.sqrt(j*(v_c - v_s)))
+    display(eq_new_accel)
+    eq_new_decel = sp.Eq(a_d, sp.sqrt(j*(v_c - v_e)))
+    display(eq_new_decel)
+    eq_v_ca = sp.Eq(v_c, sp.solve(eq_new_accel, v_c)[0])
+    display(eq_v_ca)
+    eq_v_cd = sp.Eq(v_c, sp.solve(eq_new_decel, v_c)[0])
+    display(eq_v_cd)
+    
+    display("Type IIII base formula")
+    eq_type_IIII = eq_dist.subs(d_c, 0)
+    display(eq_type_IIII)
+    eq_type_IIII = eq_type_IIII.subs(d_adj, eq_d_adj.rhs).subs(d_a, eq_d_a.rhs).subs(d_ad, eq_d_ad.rhs).subs(d_d, eq_d_d.rhs)
+    display(eq_type_IIII)
+    
+    display("Type IIII-a")
+    eq = eq_type_IIII.subs(v_c, eq_v_ca.rhs)
+    display(eq)
+    
+    display("Type IIII-b")
+    eq_ = eq_type_IIII.subs(v_c, eq_v_cd.rhs)
+    display(eq)
+    
+    display("Type IIII-c")
+    eq = eq_type_IIII.subs(v_c, eq_v_ca.rhs)
+    display(eq)
+    eq_a_d_from_a_a = sp.Eq(eq_v_cd.rhs, eq_v_ca.rhs)
+    display(eq_a_d_from_a_a)
+    eq_a_d_from_a_a = sp.Eq(a_d, sp.solve(eq_a_d_from_a_a, a_d)[0])
+    display(eq_a_d_from_a_a)
+    eq = eq.subs(a_d, eq_a_d_from_a_a.rhs)
+    display(eq)
+    eq = sp.Eq(eq.lhs - eq.rhs, 0)
+    display(eq)
+    eq = eq.simplify()
+    display(eq)
+    display("Type IIII-c derivative")
+    derivative = sp.diff(eq.lhs, a_a)
+    display(derivative)
+    derivative = derivative.simplify()
+    display(derivative)
+    derivative = derivative.expand()
+    display(derivative)
+
+adaptation_formulas2()
+
+
+# %%
 def optimize_jerk_profile(distance, start_v, max_v, end_v, accel, jerk):
     import numpy as np
     from scipy.optimize import minimize
